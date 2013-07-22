@@ -7,6 +7,11 @@ This is the simplest format for a TOF instrument
 
 @author: ricardo.leal@ill.fr
 
+Requisites:
+
+- Nexus format library, including python wrappers (nxs): 
+http://download.nexusformat.org/doc/html/installation.html
+
 '''
 
 import nxs
@@ -15,8 +20,8 @@ import datetime
 
 def createsSimpleNexusFile(filename) :
 
-	# 
-	nf = nxs.open(filename, "w5")
+	# creates an HDF5 nexus file (w5 = hdf5)
+	nf = nxs.open(filename, "w5") 
 
 	# /entry0
 	nf.makegroup("entry0","NXentry")
@@ -82,11 +87,13 @@ def createsSimpleNexusFile(filename) :
 	# close /entry/data
 	nf.closegroup()
 
+	# /entry0/data/wavelength
 	nf.makedata("wavelength",'float32',[1])
 	nf.opendata("wavelength")
 	nf.putdata(5.12)
 	nf.closedata()
 
+	# close file
 	nf.close()
 	print "Nexus file created:", filename
 
