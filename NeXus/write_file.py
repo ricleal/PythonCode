@@ -63,6 +63,7 @@ def createsSimpleNexusFile(filename) :
 	nf.compmakedata("data",data.dtype,data.shape,'lzw') # compressed data
 	nf.opendata('data')
 	nf.putattr("signal",1)
+	nf.putattr("axes","theta,time_binning")
 	nf.putdata(data)
 	nf.closedata()
 
