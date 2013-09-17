@@ -47,12 +47,13 @@ ax2.legend()
 fig3 = plt.figure()
 fig3.canvas.set_window_title('Y2-Y1')
 ax3 = fig3.add_subplot(111)
-ax3.plot(xnew,f2(xnew)-f1(xnew),'-',label="interp")
+y3 = f2(xnew)-f1(xnew)
+ax3.plot(xnew,y3,'-',label="interp")
 ax3.legend()
+
+#dump data
+subt_data = np.column_stack((xnew,y3))
+np.savetxt("/tmp/subt.csv", subt_data, delimiter=",")
 
 
 plt.show()
-
-
-if __name__ == '__main__':
-    pass
