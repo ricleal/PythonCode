@@ -25,6 +25,7 @@ def testSpectraIN5np():
         res = 500 * 500 + i
         total[i]=res
         
+    
 def testSpectraIN5npOpt():
     nSpectra = 12 * 32 * 256
     nBinsTotal = nSpectra * 512;
@@ -37,22 +38,19 @@ def testSpectraIN5npOpt():
 
 if __name__ == '__main__':
     print "Main has started!"
-    print "* testSpectraIN5"
     t_start = datetime.now()
     testSpectraIN5()
     t_end = datetime.now()
     t_total = t_end - t_start
     print "Total time: ", t_total, " seconds"
-    print "* testSpectraIN5np"
     t_start = datetime.now()
     testSpectraIN5np()
     t_end = datetime.now()
     t_total = t_end - t_start
-    print "Total time: ", t_total, " seconds"
-    print "* testSpectraIN5npOpt"
+    print "Total time with numpy: ", t_total, " seconds"
     t_start = datetime.now()
     testSpectraIN5npOpt()
     t_end = datetime.now()
     t_total = t_end - t_start
-    print "Total time: ", t_total, " seconds"
+    print "Total time with numpy Optimised: ", t_total, " seconds"
     print "Main has finished!"
