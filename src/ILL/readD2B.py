@@ -280,15 +280,18 @@ class ILLAsciiLoader(object):
             line = self.fp.readline().strip()
     
     def interleave(self):
+        """
+        Transform all spectra in an interleaved detector
+        """
         nSpectra = len(self.spectraList)
         nRows,ncols = self.detectorShape
         ncolsTotal =  nSpectra*ncols
         fullDetector = np.zeros((nRows,ncolsTotal))
         
         for idx,i in enumerate(self.spectraList):
-            for col in range(ncols):
-                item = i["values"][:,col]
-                fullDetector[:,idx*col] = item
+            for col in range(ncols): # 0 to 128
+                thisCollumn = i["values"][:,col]
+                fullDetector[:,nSpectra*col+idx] = thisCollumn
         
         return fullDetector
     
@@ -308,7 +311,7 @@ def main():
     fullDet = l.interleave()
     plt.imshow(fullDet)
     plt.savefig('/tmp/test.png', dpi = 400)
-    #plt.show()
+    plt.show()
     
     
 if __name__ == "__main__":
