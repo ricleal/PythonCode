@@ -205,13 +205,26 @@ class ILLAsciiLoader(object):
         else:
             # spectra!
             nvalues = int(line[0]) # number of float / integer fields
-            values = []
-            while len(values) < nvalues:
-                line = self.fp.readline()[:-1]
-                valuesStr = self._slice(line, length)
-                values.extend([ast.literal_eval(i) for i in valuesStr])
+#             values = []
+#             while len(values) < nvalues:
+#                 line = self.fp.readline()[:-1]
+#                 valuesStr = self._slice(line, length)
+#                 values.extend([ast.literal_eval(i) for i in valuesStr])
+            values = self.parseIFromSpectrum(nvalues, length)
             return values
     
+    def parseIFromSpectrum(self,nvalues,length):
+        values = np.zeros(nvalues,int)
+        pos = 0;
+        while pos < len(values):
+            line = self.fp.readline()[:-1]
+            valuesStr = self._slice(line, length)
+            for i in valuesStr:
+                i = ast.literal_eval(i);
+                values[pos]=i
+                pos+=1
+        return values
+
     def parseS(self):
         """
         SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
@@ -264,8 +277,8 @@ class ILLAsciiLoader(object):
         while (len(line) > 0):
             if line.startswith('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII'):
                 ## Parse spectra I
-                out = self.parseI()
-                outArr = np.array(out)
+                outArr = self.parseI()
+#                 outArr = np.array(out)
                 outArr = np.reshape(outArr,self.detectorShape)
                 outArr = outArr.T
                 thisSpectrumParams["values"] = outArr
@@ -296,7 +309,7 @@ class ILLAsciiLoader(object):
         return fullDetector
     
 def main():
-    l = ILLAsciiLoader()
+    l = ILLAsciiLoader('123976')
     l.parseFile()
     pprint.pprint(l.headerDic)
     #print len(l.spectraDic)
