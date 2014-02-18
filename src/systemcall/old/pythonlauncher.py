@@ -13,6 +13,9 @@ Launcher to run shell commands.
 
 import threading
 import logging
+import sys
+import StringIO
+import contextlib
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,18 @@ class Launcher(threading.Thread):
         
         self.globalVariables= {}
         self.localVariables= {}
+
+    @contextlib.contextmanager
+    def stdoutIO(self,stdout=None):
+        '''
+        Redirects standard output
+        '''
+        old = sys.stdout
+        if stdout is None:
+            stdout = StringIO.StringIO()
+        sys.stdout = stdout
+        yield stdout
+        sys.stdout = old
         
             
     def __str__(self):
@@ -62,7 +77,12 @@ class Launcher(threading.Thread):
         
         logger.debug("Running in background: %s" % self.__command)        
 
-        execfile(self.__command,  self.globalVariables, self.localVariables)
+        with self.stdoutIO() as s:
+            execfile(self.__command,  self.globalVariables, self.localVariables)
+        self.output = s
+        
+    def getOutput(self):
+        return self.output.getvalue()
         
         
     ### Non private methods:

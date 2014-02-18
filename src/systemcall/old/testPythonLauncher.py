@@ -56,12 +56,12 @@ class Test(unittest.TestCase):
         vlocal['c']=1
         l = Launcher(self.tmpfile,3)
         gv,lv = l.launch(localVariables=vlocal)
-#         import pprint
-#         pprint.pprint(lv)
+        self.assertEqual(l.getOutput(),'Starting...\nFinishing...\n')
         vlocal.update(lv)
         self.assertEqual(vlocal['a'],1)
         self.assertTrue(vlocal['c'])
         self.assertNotEqual(gv, {})
+        
         
     
     def test_from_caller_thread(self):
@@ -75,7 +75,7 @@ class Test(unittest.TestCase):
             print "Waiting.."
             time.sleep(0.1)
         
-        ret = l.variables
+        ret = l.localVariables
         t.join()
         self.assertEqual(ret['a'],1)
         
