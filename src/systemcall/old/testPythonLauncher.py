@@ -21,36 +21,47 @@ class Test(unittest.TestCase):
         f.write("a = 1\n")
         f.write("time.sleep(2)\n")
         f.write("b = 2\n")
+        f.write("if locals().has_key('c'):\n")
+        f.write("\tc=True\n")
         f.write("print 'Finishing...'\n")
 
     def test_longer_time_out(self):
         
         l = Launcher(self.tmpfile,5)
-        varias = l.launch()
-        self.assertEqual(varias['a'],1)
+        vglobal,vlocal = l.launch()
+        self.assertFalse(vglobal.has_key('a'))
+        self.assertEqual(vlocal['a'],1)
     
     def test_shorter_time_out(self):
         
         l = Launcher(self.tmpfile,0.1)
-        varias = l.launch()
-        self.assertEqual(varias,{})
+        vglobal,vlocal  = l.launch()
+        self.assertEqual(vlocal,{})
+        self.assertEqual(vglobal,{})
     
     def test_mixing_out_values(self):
     
-        varias={}
-        varias['a']=2
-        self.assertEqual(varias['a'],2)
-        
+        vglobal={}
+        vlocal={}
+        vlocal['a']=2
+        self.assertEqual(vlocal['a'],2)
+        self.assertEqual(vglobal,{})
+        # short time out
         l = Launcher(self.tmpfile,0.1)
-        v = l.launch()
-        varias.update(v)
-        self.assertEqual(varias['a'],2)
-        
+        gv,lv = l.launch()
+        vlocal.update(lv)
+        self.assertEqual(vlocal['a'],2)
+        self.assertEqual(vglobal,{})
+        #long time out
+        vlocal['c']=1
         l = Launcher(self.tmpfile,3)
-        v = l.launch()
-        varias.update(v)
-        self.assertEqual(varias['a'],1)
-        
+        gv,lv = l.launch(localVariables=vlocal)
+#         import pprint
+#         pprint.pprint(lv)
+        vlocal.update(lv)
+        self.assertEqual(vlocal['a'],1)
+        self.assertTrue(vlocal['c'])
+        self.assertNotEqual(gv, {})
         
     
     def test_from_caller_thread(self):

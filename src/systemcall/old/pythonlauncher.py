@@ -41,7 +41,8 @@ class Launcher(threading.Thread):
         
         self.setDaemon(True) # kills substreads when exit
         
-        self.variables= {}
+        self.globalVariables= {}
+        self.localVariables= {}
         
             
     def __str__(self):
@@ -61,12 +62,12 @@ class Launcher(threading.Thread):
         
         logger.debug("Running in background: %s" % self.__command)        
 
-        execfile(self.__command, self.variables )
+        execfile(self.__command,  self.globalVariables, self.localVariables)
         
         
     ### Non private methods:
     
-    def launch(self):
+    def launch(self,globalVariables=None, localVariables=None):
         """
         Only function to be called. Starts the command with a time out.
         
@@ -75,15 +76,20 @@ class Launcher(threading.Thread):
         It might have to be launched within other thread!!!!
         http://stackoverflow.com/questions/4158502/python-kill-or-terminate-subprocess-when-timeout
         """
+        if globalVariables is not None:
+            self.globalVariables = globalVariables
+        if localVariables is not None:
+            self.localVariables = localVariables
+        
         self.start()
         self.join(self.__timeout)
 
         if self.is_alive():
             logger.info("Thread timed out but the process is still running. Killing: %s" % self.__command )
-            return {}
+            return {},{}
         else :
             logger.info("Thread finished successfully: %s"%self.__command)
-            return self.variables
+            return self.globalVariables, self.localVariables
     
 
 
