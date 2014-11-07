@@ -12,7 +12,7 @@ import numpy as np
 class GaussianDispersion(object):
     def __init__(self, npts=35, width=0, nsigmas=3): #number want, percent deviation, #standard deviations from mean
         """
-        @param npts: Number of points (0 to npts)
+        @param npts: Npts = number of points to average over the distribution (0 to npts)
         @param witdh: deviation
         @param sigmas: number of standard deviations from mean
          
@@ -47,18 +47,20 @@ class GaussianDispersion(object):
         return x, px
 
 def _plot2Axes(x1,x2):
-    import numpy as np
     import matplotlib.pyplot as plt
     fig, ax1 = plt.subplots()
-    ax1.plot(x1)
+    ax1.plot(x1,'b-',label="Values")
+    ax1.set_ylabel('Value of the Parameters', color='b')
     ax2 = ax1.twinx()
-    ax2.plot(x2,'r.')
-    ax2.set_ylabel('weigths', color='r')
+    ax2.plot(x2,'r.',label="Weigths")
+    ax2.set_ylabel('Weighting factors', color='r')
+    ax1.legend(loc='upper left')
+    ax2.legend()
     plt.show()
 
 def test():
-    g = GaussianDispersion(100,.1,5)
-    value, weight = g.get_weights(70, 0, 1000, True)
+    g = GaussianDispersion(npts=100, width=0.3, nsigmas=5)
+    value, weight = g.get_weights(center=70, min=0, max=1000, relative=True)
     print value, value.shape
     print weight, weight.shape
     _plot2Axes(value,weight)
