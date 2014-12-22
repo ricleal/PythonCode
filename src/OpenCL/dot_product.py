@@ -2,17 +2,18 @@ import pyopencl as cl
 from pyopencl import array
 import numpy as np
 
-source = """__kernel void matrix_dot_vector(
-__global const float4 *matrix,
-__global const float4 *vector,
-__global float *result) {
-    int gid = get_global_id(0);
-    result[gid] = dot(matrix[gid], vector[0]);
+source = """
+__kernel void matrix_dot_vector(
+    __global const float4 *matrix,
+    __global const float4 *vector,
+    __global float *result) {
+        int gid = get_global_id(0);
+        result[gid] = dot(matrix[gid], vector[0]);
 }
 """
 def main():
-    vector = np.zeros((1, 1), cl.array.vec.float4)
-    matrix = np.zeros((1, 4), cl.array.vec.float4)
+    vector = np.zeros((1, 1), cl.array.vec.float4) #[[(0.0, 0.0, 0.0, 0.0)]] 
+    matrix = np.zeros((1, 4), cl.array.vec.float4) # [[(0.0, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 0.0), (0.0, 0.0, 0.0, 0.0),(0.0, 0.0, 0.0, 0.0)]]
     matrix[0, 0] = (1, 2, 4, 8)
     matrix[0, 1] = (16, 32, 64, 128)
     matrix[0, 2] = (3, 6, 9, 12)
@@ -46,8 +47,12 @@ def main():
     # # Step #12. Release context, program, kernels and memory.
     # # PyOpenCL performs this step for you, and therefore,
     # # you don't need to worry about cleanup code
-     
-    print(matrix_dot_vector)
+    print "Matrix: ",
+    print matrix
+    print "Vector: ",
+    print vector
+    print "Result: ",
+    print matrix_dot_vector
 
 if __name__ == "__main__":
     main()
