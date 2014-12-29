@@ -64,9 +64,31 @@ class GPU():
 matrix1 = 1 * np.random.random((16,16)).astype(np.float32)
 matrix2 = 1 * np.random.random((16,16)).astype(np.float32)
 
+##### 0
+# t00 = time.time()
+# 
+# gpu1 = GPU("matrix0.c")
+# gpu1.init()
+#             
+# mf = cl.mem_flags
+# a_buf = cl.Buffer(gpu1.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=matrix1)
+# b_buf = cl.Buffer(gpu1.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=matrix2)
+# dest_buf = cl.Buffer(gpu1.ctx, mf.WRITE_ONLY, matrix1.nbytes )
+# 
+# gpu1.callFunction("stupid_mul", matrix1.shape, None,a_buf, b_buf, dest_buf)
+# 
+# final_matrix0 = np.empty_like(matrix1)
+# cl.enqueue_copy(gpu1.queue, final_matrix0 , dest_buf)
+# 
+# delta_t10 = time.time() - t00
+# 
+# print "Times : t1 =", delta_t10*1000
+# print  "Matrix0:\n", final_matrix0
+
+
 
 ##### 1
-t0 = time.time()
+
 
 gpu1 = GPU("matrix1.c")
 gpu1.init()
@@ -76,6 +98,7 @@ a_buf = cl.Buffer(gpu1.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=matrix1)
 b_buf = cl.Buffer(gpu1.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=matrix2)
 dest_buf = cl.Buffer(gpu1.ctx, mf.WRITE_ONLY, matrix1.nbytes )
 
+t0 = time.time()
 gpu1.callFunction("naive_mul", matrix1.shape, None,a_buf, b_buf, dest_buf)
 
 final_matrix1 = np.empty_like(matrix1)
@@ -86,7 +109,7 @@ delta_t1 = time.time() - t0
 print  "Matrix1:\n", final_matrix1
 
 ##### 2
-t0 = time.time()
+
 
 gpu2 = GPU("matrix2.c")
 gpu2.init()
@@ -96,6 +119,7 @@ a_buf = cl.Buffer(gpu2.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=matrix1)
 b_buf = cl.Buffer(gpu2.ctx, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=matrix2)
 dest_buf = cl.Buffer(gpu2.ctx, mf.WRITE_ONLY, matrix1.nbytes )
 
+t0 = time.time()
 gpu2.callFunction("local_mul", matrix1.shape, None, a_buf, b_buf, dest_buf)
 
 final_matrix2 = np.empty_like(matrix1)
