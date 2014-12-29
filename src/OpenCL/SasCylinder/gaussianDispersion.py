@@ -22,7 +22,7 @@ class GaussianDispersion(object):
         self.npts = npts
         self.width = width
         self.nsigmas = nsigmas
-        print("GaussianDispersion: npts=%.2f width=%.2f nsigmas%.2f "%(npts,width,nsigmas))
+        print("GaussianDispersion: Num points=%d; Deviation percentage=%.2f; Num of deviations from mean=%d"%(npts,width,nsigmas))
 
     def get_pars(self):
         return self.__dict__
@@ -46,27 +46,28 @@ class GaussianDispersion(object):
         print "GaussianDispersion weights:",x.shape,px.shape
         return x, px
 
-def _plot2Axes(x1,x2):
+   
+    
+def plotValuesAndWeights(x1,x2,**kwargs):
     import matplotlib.pyplot as plt
-    fig, ax1 = plt.subplots()
-    ax1.plot(x1,'b-',label="Values")
-    ax1.set_ylabel('Value of the Parameters', color='b')
-    ax2 = ax1.twinx()
-    ax2.plot(x2,'r.',label="Weigths")
-    ax2.set_ylabel('Weighting factors', color='r')
-    ax1.legend(loc='upper left')
-    ax2.legend()
+    plt.plot(x1,x2,".")
+    plt.title(str(kwargs), fontsize=10)
+    plt.ylabel('Weight')    
+    plt.xlabel('Value')    
     plt.show()
 
+
 def test():
-    g = GaussianDispersion(npts=100, width=0.3, nsigmas=5)
-    value, weight = g.get_weights(center=70, min=0, max=1000, relative=True)
-    print value, value.shape
-    print weight, weight.shape
-    _plot2Axes(value,weight)
+    kwargs1 = dict(npts=100, width=0.1, nsigmas=3)
+    g = GaussianDispersion(**kwargs1)
     
-    
-    
+    kwargs2 = dict(center=70, min=0, max=1000, relative=True)
+    value, weight = g.get_weights(**kwargs2)
+    #print value, value.shape
+    #print weight, weight.shape
+    kwargs = dict(kwargs1.items() + kwargs2.items() )
+    plotValuesAndWeights(value, weight, **kwargs)
+        
 if __name__=="__main__":
     print "Starting..."
     test()
