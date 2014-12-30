@@ -30,7 +30,7 @@ def set_N_threads(nthreads):
     lib.omp_set_num_threads(nthreads)
     
 def do_some_task():
-    SIZE = 1024
+    SIZE = 1e8
     
     input_array = 1 * np.random.random(SIZE).astype(np.float32)
     output_array = np.empty_like(input_array)
@@ -43,6 +43,6 @@ def do_some_task():
 
 
 if __name__ == "__main__":
-    set_N_threads(8)
+    #set_N_threads(12)
     out = do_some_task()
     print out.shape

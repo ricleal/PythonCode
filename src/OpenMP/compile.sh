@@ -1,7 +1,4 @@
-echo "GCC 1"
-gcc -O3 -lm -fopenmp -fPIC -c task.c -o task.o
-echo "GCC 2"
-gcc -shared -lgomp -o libtask.so task.o
-# gcc -shared -liomp5 -o libtask.so task.o
+echo "Compilation..."
+gcc -shared -fPIC -std=c99 -fopenmp -O2 -Wall task.c -o libtask.so -lm
 echo "Execute Python"
 python task.py
