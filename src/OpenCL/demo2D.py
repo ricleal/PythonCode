@@ -4,23 +4,38 @@ import numpy as np
 """
 OpenCL demo:
 
-Executes a multiplication in the GPU of 2 random vectors.
+Executes a 2D matrix element wise multiplication
 
 """
 
 
-source = """/**
+source = """
 //Traditional loop as a function in C:
-void trad_mul(int n, const float *a, const float *b, float *c) {
-    int i;
-    for (i=0; i<n; i++)
-        c[i] = a[i] * b[i];
+/*
+* m rown
+* n collumns
+*
+void trad_mul(const float *a, const float *b, float *c,const int m, const int n) {
+    int i, j;
+    for (i=0; i<m; i++)
+        for (j=0; j<n; j++)
+            c[i*n + j ] = a[i*n + j] * b[i*n + j];
 }*/
 
+
 // OpenCL version : c = a * b
-__kernel void gpu_mul(__global const float *a, __global const float *b, __global float *c) {
-    int id = get_global_id(0);
-    c[id] = a[id] * b[id];
+__kernel void gpu_mul(__global const float *a, __global const float *b, __global float *c,
+    const unsigned int m, const unsigned int n) {
+    
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    
+    // Otherwise we could get m and n from:
+    // int m = get_global_size(0);
+    // int n = get_global_size(1);
+    
+    c[i*n + j ] = a[i*n + j] * b[i*n + j];
+    
 } // execute over n "work items"
 """
 
@@ -52,10 +67,14 @@ ctx = get_prefered_context()
 queue = cl.CommandQueue(ctx) 
 
 # create some data array to give as input to Kernel and get output
-SIZE = 256
-a_np = np.random.rand(SIZE).astype(np.float32)
-b_np = np.random.rand(SIZE).astype(np.float32)
+a = [[ 1.,2.,3.],[4.,3.,2.]]
+b = a
+
+a_np = np.array(a, dtype=np.float32)
+b_np = np.array(b, dtype=np.float32)
 c_np = np.empty_like(a_np)
+
+m,n = a_np.shape #Out[11]: (2, 3)
 
 # create the buffers to hold the values of the input
 a_buf = cl.Buffer(ctx, cl.mem_flags.READ_ONLY | cl.mem_flags.COPY_HOST_PTR,hostbuf=a_np)
@@ -67,15 +86,15 @@ c_buf = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, c_np.nbytes)
 prg = cl.Program(ctx, source).build()
 
 # Kernel is now launched
-launch = prg.gpu_mul(queue, a_np.shape, None, a_buf, b_buf, c_buf)
+launch = prg.gpu_mul(queue, a_np.shape, None, a_buf, b_buf, c_buf,np.uint32(m),np.uint32(n))
 # wait till the process completes
 launch.wait()
 
 cl.enqueue_read_buffer(queue, c_buf, c_np).wait()
 # print the output
-print "a:", a_np
-print "b:", b_np
-print "c :", c_np
+print "a:\n", a_np
+print "b:\n", b_np
+print "c:\n", c_np
 
 
 
