@@ -8,23 +8,23 @@ OpenCL demo:
 
 """
 
-SIZE_X = 256
-SIZE_Y = 256
-SIZE_Z = 256
 
 source = """
-    __kernel void test(__global const float *a, __global const float *b, __global float *c,
-    unsigned a_width, unsigned a_height)
-    {
-      int x = get_global_id(0);
-      int y = get_global_id(1);
-      int z = get_global_id(2);
-
-      int idx = z * %d * %d + y * %d + x;
-
-      c[idx] = a[idx] * b[idx] + x + 3 * y + 5 * z;
-    }
-    """ % (SIZE_Y, SIZE_X, SIZE_X)
+__kernel void test(__global const float *a, __global const float *b, __global float *c)
+{
+    int i = get_global_id(0);
+    int j = get_global_id(1);
+    int k = get_global_id(2);
+    
+    int m = get_global_size(0);
+    int n = get_global_size(1);
+    int w = get_global_size(2);
+    
+    int idx = i*n*w + j*w + k; 
+    
+    c[idx] = a[idx] * b[idx];
+}
+"""
 
 
 def get_prefered_context(preferedDeviceType = cl.device_type.GPU):
@@ -55,9 +55,14 @@ queue = cl.CommandQueue(ctx)
 
 # create some data array to give as input to Kernel and get output
 
+a = [[[  1.,   2.,  1.],
+      [  3.,   1.,  1.]],
+     [[  1.,   9.,  1.],
+      [  1.,   1.,  2.]]]
+b = a
 
-a_np = np.random.random((SIZE_X,SIZE_Y,SIZE_Z)).astype(np.float32)
-b_np = np.random.random((SIZE_X,SIZE_Y,SIZE_Z)).astype(np.float32)
+a_np = np.array(a, dtype=np.float32)
+b_np = np.array(b, dtype=np.float32)
 c_np = np.empty_like(a_np)
 
 # create the buffers to hold the values of the input
@@ -70,16 +75,16 @@ c_buf = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, c_np.nbytes)
 prg = cl.Program(ctx, source).build()
 
 # Kernel is now launched
-launch = prg.test(queue, a_np.shape, None, a_buf, b_buf, c_buf,
-                  np.uint32(SIZE_X), np.uint32(SIZE_Y))
+launch = prg.test(queue, a_np.shape, None, a_buf, b_buf, c_buf)
 # wait till the process completes
 launch.wait()
 
 cl.enqueue_read_buffer(queue, c_buf, c_np).wait()
 # print the output
-print "a:", a_np
-print "b:", b_np
-print "c :", c_np
+print "Shape:", a_np.shape
+print "a:\n", a_np
+print "b:\n", b_np
+print "c:\n", c_np
 
 
 

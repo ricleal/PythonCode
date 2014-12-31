@@ -34,7 +34,8 @@ __kernel void gpu_mul(__global const float *a, __global const float *b, __global
     // int m = get_global_size(0);
     // int n = get_global_size(1);
     
-    c[i*n + j ] = a[i*n + j] * b[i*n + j];
+    int idx = i*n + j; 
+    c[idx] = a[idx] * b[idx];
     
 } // execute over n "work items"
 """
