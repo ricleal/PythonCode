@@ -58,15 +58,26 @@ def plotValuesAndWeights(x1,x2,**kwargs):
 
 
 def test():
-    kwargs1 = dict(npts=100, width=0.1, nsigmas=3)
+    kwargs1 = dict(npts=90, width=0.1, nsigmas=3)
     g = GaussianDispersion(**kwargs1)
     
-    kwargs2 = dict(center=70, min=0, max=1000, relative=True)
+    kwargs2 = dict(center=50, min=0, max=100, relative=True)
     value, weight = g.get_weights(**kwargs2)
     #print value, value.shape
     #print weight, weight.shape
     kwargs = dict(kwargs1.items() + kwargs2.items() )
     plotValuesAndWeights(value, weight, **kwargs)
+    
+    sum_wxv = 0;
+    sum_w = 0;
+    for i in range(len(value)):
+        v = value[i]
+        w = weight[i]
+        sum_wxv += v*w 
+        sum_w += w
+    
+    print kwargs
+    print "Sum(value * weigth) =", sum_wxv, "\nSum(weigth) =", sum_w, "\nNormalisation: Sum(value * weigth) /  Sum(weigth) =", sum_wxv/sum_w 
         
 if __name__=="__main__":
     print "Starting..."
