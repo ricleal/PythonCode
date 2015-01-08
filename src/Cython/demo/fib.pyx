@@ -11,7 +11,7 @@ def fib(n):
         print b,
         a, b = b, a + b
 
-
+## Other example:
 
 cdef double f(double x) except? -2:
     """ function to integrate """
