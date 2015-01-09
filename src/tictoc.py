@@ -1,8 +1,15 @@
+import time
+
 TIC = None
+ 
 def tic():
     global TIC
-    TIC = datetime.datetime.now()
+    TIC = time.time()
 
 def toc():
-    now = datetime.datetime.now()
-    return (now-TIC).total_seconds()
+    """
+    Return time in seconds
+    """
+    now = time.time()
+    delta = now-TIC
+    return delta
