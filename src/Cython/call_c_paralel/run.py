@@ -62,6 +62,12 @@ def main():
     t1.join()
     t2.join()
     print "Parallel finished:", toc()
+    
+    C2 = np.zeros((A.shape[0], B.shape[1]))
+    tic()
+    C2 = np.dot(A,B)
+    print "Numpy finished (the fastest!):", toc() 
+    print "C == C?",np.allclose(C,C2)
 
 if __name__ == "__main__":
     print "Main started..."
