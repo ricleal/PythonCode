@@ -1,0 +1,9 @@
+<h1>Results for: {{ name.firstname_text }} {{ name.lastname_text }}</h1>
+
+<ul>
+{% for phone in name.phone_set.all %}
+    <li>{{ phone.phone_number }} has priority: {{ phone.phone_priority }} </li>
+{% endfor %}
+</ul>
+
+<a href="{% url 'app1:detail' name.id %}">Set another priority?</a>

@@ -17,10 +17,6 @@ def detail(request, name_id):
     name = get_object_or_404(Name, pk=name_id)
     return render(request, 'app1/detail.html', {'name': name})
 
-def results(request, name_id):
-    response = "You're looking at the results of name %s."
-    return HttpResponse(response % name_id)
-
 def priority(request, name_id):
     p = get_object_or_404(Name, pk=name_id)
     try:
@@ -38,3 +34,7 @@ def priority(request, name_id):
         # with POST data. This prevents data from being posted twice if a
         # user hits the Back button.
         return HttpResponseRedirect(reverse('app1:results', args=(p.id,)))
+
+def results(request, name_id):
+    name = get_object_or_404(Name, pk=name_id)
+    return render(request, 'app1/results.html', {'name': name})
