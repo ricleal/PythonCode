@@ -1,1 +1,6 @@
-<b>{{ name }} </b>
+<h1>{{ name.firstname_text }} {{ name.lastname_text }}</h1>
+<ul>
+{% for phone in name.phone_set.all %}
+    <li>{{ phone.phone_number }}</li>
+{% endfor %}
+</ul>
