@@ -1,0 +1,9 @@
+{% if latest_name_list %}
+    <ul>
+    {% for name in latest_name_list %}
+        <li><a href="/app1/{{ name.id }}/">{{ name.firstname_text }} {{ name.lastname_text }} </a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No Names are available.</p>
+{% endif %}
