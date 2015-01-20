@@ -1,6 +1,25 @@
 <h1>{{ name.firstname_text }} {{ name.lastname_text }}</h1>
+
+<h2> Available phone Numbers </h2>
+
 <ul>
 {% for phone in name.phone_set.all %}
     <li>{{ phone.phone_number }}</li>
 {% endfor %}
 </ul>
+
+
+
+<h2> Set the one you prefer to be called first: </h2>
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+
+<form action="{% url 'app1:priority' name.id %}" method="post">
+{% csrf_token %}
+{% for phone in name.phone_set.all %}
+    <input type="radio" name="phone" id="phone{{ forloop.counter }}" value="{{ phone.id }}" />
+    <label for="phone{{ forloop.counter }}">{{ phone.phone_number }}</label><br />
+{% endfor %}
+<input type="submit" value="Set Priority" />
+</form>

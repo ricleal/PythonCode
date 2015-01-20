@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('app1', '0002_phone_phone_type'),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='phone',
+            name='phone_priority',
+            field=models.IntegerField(default=0),
+            preserve_default=True,
+        ),
+        migrations.AlterField(
+            model_name='phone',
+            name='phone_type',
+            field=models.IntegerField(default=0, max_length=1, choices=[(0, b'Home'), (1, b'Mobile'), (2, b'Work'), (3, b'Other')]),
+            preserve_default=True,
+        ),
+    ]

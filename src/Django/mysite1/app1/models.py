@@ -11,7 +11,7 @@ class Name(models.Model):
     pub_date = models.DateTimeField('date published')
 
     def __unicode__(self):
-    	return str(self.firstname_text) + " " + str(self.lastname_text)
+        return str(self.firstname_text) + " " + str(self.lastname_text)
 
 
     def was_published_recently(self):
@@ -21,9 +21,18 @@ class Name(models.Model):
     was_published_recently.short_description = 'Published recently?'
 
 class Phone(models.Model):
+    MAYBECHOICE = (
+    (0, 'Home'),
+    (1, 'Mobile'),
+    (2, 'Work'),
+    (3, 'Other'),)
+    
     name = models.ForeignKey(Name)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', 
     	message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
     phone_number = models.CharField(max_length=20, validators=[phone_regex], blank=True) # validators should be a list
+    phone_type = models.IntegerField(max_length=1, default=0, choices=MAYBECHOICE)
+    phone_priority = models.IntegerField(default=0)
+    
     def __unicode__(self):
-    	return str(self.phone_number)
+        return str(self.phone_number)
