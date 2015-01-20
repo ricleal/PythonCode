@@ -4,18 +4,22 @@ from django.template import RequestContext, loader
 from django.core.urlresolvers import reverse
 
 from app1.models import Name
+from django.views import generic
 
 
-def index(request):
-    latest_name_list = Name.objects.order_by('-pub_date')[:5]
-    context = {'latest_name_list': latest_name_list}
-    return render(request, 'app1/index.html', context)
+class IndexView(generic.ListView):
+    template_name = 'app1/index.html'
+    context_object_name = 'latest_name_list'
+
+    def get_queryset(self):
+        """Return the last five published Names."""
+        return Name.objects.order_by('-pub_date')[:5]
 
 
-# Create your views here.
-def detail(request, name_id):
-    name = get_object_or_404(Name, pk=name_id)
-    return render(request, 'app1/detail.html', {'name': name})
+class DetailView(generic.DetailView):
+    model = Name
+    template_name = 'app1/detail.html'
+    
 
 def priority(request, name_id):
     p = get_object_or_404(Name, pk=name_id)
@@ -35,6 +39,6 @@ def priority(request, name_id):
         # user hits the Back button.
         return HttpResponseRedirect(reverse('app1:results', args=(p.id,)))
 
-def results(request, name_id):
-    name = get_object_or_404(Name, pk=name_id)
-    return render(request, 'app1/results.html', {'name': name})
+class ResultsView(generic.DetailView):
+    model = Name
+    template_name = 'app1/results.html'
