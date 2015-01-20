@@ -7,11 +7,8 @@ from app1.models import Name
 
 def index(request):
     latest_name_list = Name.objects.order_by('-pub_date')[:5]
-    template = loader.get_template('app1/index.html')
-    context = RequestContext(request, {
-        'latest_name_list': latest_name_list,
-    })
-    return HttpResponse(template.render(context))
+    context = {'latest_name_list': latest_name_list}
+    return render(request, 'app1/index.html', context)
 
 
 # Create your views here.
