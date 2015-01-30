@@ -13,7 +13,7 @@ class IndexView(generic.ListView):
 
     def get_queryset(self):
         """Return the last five published Names."""
-        return Name.objects.order_by('-pub_date')[:5]
+        return Name.objects.order_by('-pub_date')[:10]
 
 
 class DetailView(generic.DetailView):
@@ -42,3 +42,7 @@ def priority(request, name_id):
 class ResultsView(generic.DetailView):
     model = Name
     template_name = 'app1/results.html'
+
+def test(request):
+    return render(request, 'app1/test.html')
+    

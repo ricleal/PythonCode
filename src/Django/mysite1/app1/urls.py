@@ -6,7 +6,9 @@ urlpatterns = patterns('',
     # /app1
     url(r'^$', views.IndexView.as_view(), name='index'),
     # /polls/5/
+    url(r'^1/$', views.test, name='test'),
     url(r'^(?P<pk>\d+)/$', views.DetailView.as_view(), name='detail'),
+    
     # ex: /polls/5/results/
     url(r'^(?P<pk>\d+)/results/$', views.ResultsView.as_view(), name='results'),
     # ex: /polls/5/vote/
