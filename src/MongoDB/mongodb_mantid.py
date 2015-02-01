@@ -3,17 +3,11 @@ Created on Oct 29, 2013
 
 @author: leal
 
-
-This is a test and is not connected to the main code.
-The idea is to have 2 capped collections: one for numors another for queries.
-When numors reach the limits it should delete the temporary files it points to.
-To date MongoDB does not implement triggers and there's no way to delete the files when a item is dropped.
-
-
-
 '''
 from pymongo import MongoClient
 import json
+import pprint as pp
+from datetime import datetime
 
 content="""{
     "count": 2119, 
@@ -1523,9 +1517,12 @@ content="""{
     ]
 }"""
 
-import pprint as pp
 
+
+# create connection
 client = MongoClient()
+
+# get / create DB
 db = client.mantid
 
 # My collection is called usage
@@ -1535,6 +1532,7 @@ collection = db['usage']
 d = json.loads(content)
 results = d['results']
 
+# Add to my collection the results
 collection.insert(results)
 
 print "Distinct uid:"
@@ -1546,8 +1544,67 @@ for doc in cursor:
     pp.pprint(doc)
 
 
+### New collection but with date per record:
+# My collection is called usage
+collection = db['usage_date']
+
+# add field last_updated_date to every record
+for r in results:
+    r['last_updated_date']= datetime.now()
+    collection.insert(r)
+
+print "Let's see before update: ", {"uid": "b609649fb139fa93893a914621f51678"}
+cursor = collection.find({"uid": "b609649fb139fa93893a914621f51678"})
+print "***** :"
+for doc in cursor:
+    pp.pprint(doc)
+
+
+#update
+collection.update({"uid": "b609649fb139fa93893a914621f51678"}, 
+                  { "$set": { "update1" : "This is an update 1",
+                              "update2" : "This is an update 2" ,
+                              'last_updated_date' : datetime.now()} }, upsert=False )
+
+# Let's see after update:
+print "Let's see what I have updated: ", {"uid": "b609649fb139fa93893a914621f51678"}
+cursor = collection.find({"uid": "b609649fb139fa93893a914621f51678"})
+print "***** Uid updated:"
+for doc in cursor:
+    pp.pprint(doc)
+
+
+## If doesn't exist insert, otherwise update
+collection.update({"uid": "b609649fb139fa93893a914621f51678"}, 
+                  { "$set": { "update1" : "This is an update 1 2nd time",
+                              "update2" : "This is an update 2 2nd time" ,
+                              'last_updated_date' : datetime.now()} }, upsert=True );
+
+# Let's see after update:
+print "Let's see what I have updated a 2n time: ", {"uid": "b609649fb139fa93893a914621f51678"}
+cursor = collection.find({"uid": "b609649fb139fa93893a914621f51678"})
+print "***** Uid updated:"
+for doc in cursor:
+    pp.pprint(doc)
+
+# let's change the id of the previous doc
+doc["uid"] = "111111111111111111"
+doc.update( {'last_updated_date' : datetime.now()} )
+doc.pop("_id") # remove the MongoDB key!!! otherwise there's a clash
+collection.update({"uid": "111111111111111111"}, 
+                  { "$set":  doc }, upsert=True );
+
+cursor = collection.find({"uid": "111111111111111111"})
+print "***** Uid updated:"
+for doc in cursor:
+    pp.pprint(doc)
+
+# Remove the mess I just did
+collection.remove()
+# Close
 client.close()
 
+print "Done!"
     
     
     
