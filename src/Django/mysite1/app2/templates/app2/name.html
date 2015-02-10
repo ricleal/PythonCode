@@ -1,0 +1,22 @@
+{% load staticfiles %}
+<link rel="stylesheet" type="text/css" href="{% static 'style.css' %}" />
+
+<H1>Form test</H1>
+
+
+
+{% for field in form %}
+	{% if field.value %}
+	    <div class="fieldWrapper">
+	        {{ field.label_tag }} {{ field.value }}
+	    </div>
+    {% endif %}
+{% endfor %}
+
+
+<form action="{% url 'app2:name' %}" method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="submit" value="Submit" />
+</form>
+ 
