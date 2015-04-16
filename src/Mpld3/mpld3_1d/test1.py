@@ -46,10 +46,10 @@ html_str = """<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>The HTML5 Herald</title>
+  <title>mpld3 plot</title>
 </head>
 <body>
-<h1>Here we have a simple plot in mpld3</h1>
+<h1>Here we have a simple 1D plot in mpld3</h1>
 <div>
   %s
 </div>
@@ -63,10 +63,3 @@ html_file= open("index.html","w")
 html_file.write(html_str)
 html_file.close()
 
-import SimpleHTTPServer
-import SocketServer
-PORT = 8080
-Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-httpd = SocketServer.TCPServer(("", PORT), Handler)
-print "serving at port", PORT, "Open in your browser: http://localhost:%s/"%PORT
-httpd.serve_forever()
