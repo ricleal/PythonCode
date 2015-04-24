@@ -12,7 +12,9 @@ data_x = data['position']
 data_y = data['value']
 
 # figure
-fig = plt.figure('.: MatPlotLib Example :.')
+fig = plt.figure('.: MatPlotLib Example :.',
+                 figsize=(9, 6) # figure size in inches
+                 )
 fig.suptitle('Plot for file '+filePath, fontsize=12, fontweight='bold')
 
 # Add my axis (I only have one, but I could have two, e.g., mirrored Y)
@@ -23,11 +25,8 @@ ax = fig.add_subplot(111)
 ax.plot(data_x,data_y,'o', label='Raw data')
 ax.set_xlabel(data.dtype.names[0])
 
-# Now I want to have X axis with some Latex:
-from matplotlib import rc
-rc('text', usetex=True)
-ax.set_ylabel(data.dtype.names[1]+' ($\\AA^{-1}$)')
-rc('text', usetex=False)
+ax.set_ylabel(data.dtype.names[1]+' (&chi;)')
+
 
 # fit data with a polynomial of degree 1: ax+b=0
 a,b = np.polyfit(data_x, data_y, 1)
