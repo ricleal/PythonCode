@@ -1,6 +1,9 @@
+from __future__ import unicode_literals
+
 import mpld3
 import numpy as np
 import matplotlib.pyplot as plt
+from mpld3 import plugins
 
 # figure
 fig = plt.figure('.: MatPlotLib Example :.')
@@ -13,14 +16,19 @@ dist = np.hypot(x, y) # Linear distance from point 0, 0
 z = np.cos(2 * dist / np.pi)
 
 # Now I want to have X axis with some Latex:
-from matplotlib import rc
-plt.rc('text', usetex=True)
-plt.rc('font', family='serif')
+#from matplotlib import rc
+#plt.rc('text', usetex=True)
+#plt.rc('font', family='serif')
 ax.set_title(r'$\cos(\frac{2*\sqrt{x^2 + y^2}}{\pi})$', size=16)
+
 
 
 im = ax.imshow(z, origin='lower', interpolation='bicubic',
           extent=(x.min(), x.max(), y.min(), y.max()))
+
+# Can't have this working
+# LineLabelTooltip argument must be:
+# plugins.connect(fig, plugins.LineLabelTooltip( im.get_array() ))
 
 plt.colorbar(im)
 
@@ -49,4 +57,3 @@ html_str = """<!doctype html>
 html_file= open("index.html","w")
 html_file.write(html_str)
 html_file.close()
-

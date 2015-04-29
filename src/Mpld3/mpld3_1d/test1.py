@@ -1,7 +1,10 @@
+from __future__ import unicode_literals
+
 import mpld3
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
+import matplotlib as mpl
 
 # read CSV as a numpy array
 filePath = 'data.csv'
@@ -25,7 +28,8 @@ ax = fig.add_subplot(111)
 ax.plot(data_x,data_y,'o', label='Raw data')
 ax.set_xlabel(data.dtype.names[0])
 
-ax.set_ylabel(data.dtype.names[1]+' (&chi;)')
+# Unicode
+ax.set_ylabel(data.dtype.names[1]+' (\u03A9)')
 
 
 # fit data with a polynomial of degree 1: ax+b=0
@@ -52,7 +56,7 @@ html_str = """<!doctype html>
 <div>
   %s
 </div>
-<p>Latex rendering is not working :(</p>
+<p>Latex rendering is not working :( But unicode is! :)</p>
 </div>
 </body>
 </html>
@@ -61,4 +65,3 @@ html_str = """<!doctype html>
 html_file= open("index.html","w")
 html_file.write(html_str)
 html_file.close()
-
