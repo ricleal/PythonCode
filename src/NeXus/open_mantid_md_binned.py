@@ -45,13 +45,26 @@ class NexusReader(object):
     def readData(self):
         f = nxs.open(self.filepath)
         f.opengroup('MDHistoWorkspace')
-        #f.opengroup('signal')
+
         f.opendata('signal')
         self.data = f.getdata()
         f.closedata()
-        #f.closegroup()
+
+        self.qs = self.read_axes(f)
+
         f.closegroup()
         f.close()
+    
+    def read_axes(self, nexus_handler):
+        qs = []
+        for q in "Q1,Q2,Q3".split(","):
+            nexus_handler.opendata(q)
+            #setattr(self, q, nexus_handler.getdata())
+            qs.append(nexus_handler.getdata())
+            nexus_handler.closedata()
+        return qs
+        
+        
     
     def cast_data(self,target='float16'):
         self.data = self.data.astype(target)
@@ -71,6 +84,9 @@ class NexusReader(object):
         if self.data is not None:
             a = self.data
             #mlab.pipeline.volume(mlab.pipeline.scalar_field(a))
+            mlab.figure(1, size=(500, 500), fgcolor=(0, 0, 0),
+                                    bgcolor=(1, 1, 1))
+            mlab.clf()
             mlab.pipeline.volume(mlab.pipeline.scalar_field(a), vmin=0.3, vmax=1)
     
     def plotContour(self):
@@ -113,9 +129,25 @@ class NexusReader(object):
             for dim in range(M.ndim):
                 for front_side in (True, False):
                     yield get_face(M, dim, front_side)
-        
 
-        
+        def chop_recursive(M):
+            #print "M shape", M.shape
+            for dim in range(self.data.ndim):
+                for front_side in (True, False):
+                    this_face = get_face(M, dim, front_side)
+                    this_face_has_element_higher_than_treshold = False
+                    #print "---->", np.max(this_face), np.min(this_face)                    
+                    if np.max(this_face) > threshold:
+                        this_face_has_element_higher_than_treshold = True
+                        break;
+                    if not this_face_has_element_higher_than_treshold:
+                        M = remove_face(M, dim, front_side)
+                        M = chop_recursive(M)
+            return M
+                    
+        M = self.data
+        M = chop_recursive(M)
+        self.data = M
             
 if __name__ == '__main__':
     timeit()
@@ -132,7 +164,13 @@ if __name__ == '__main__':
     timeit()
     print n1.data.dtype
     
-    n1.plotAll()
+    print "Before chop:", n1.data.shape
+    n1.trim_faces(threshold=0.5)
     timeit()
+    print "After chop:", n1.data.shape
+    
+    n1.plotData3D()
+    timeit()
+    print 30*"*", " READY ", 30*"*"
     mlab.show()
     
