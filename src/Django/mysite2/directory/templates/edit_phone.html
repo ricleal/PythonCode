@@ -1,3 +1,6 @@
+{% extends "base.html" %}
+
+{% block content %}
 <h1>Add a Phone</h1>
 
 <form action="{% url "phone-new" %}" method="POST">
@@ -9,3 +12,4 @@
 </form>
 
 <a href="{% url "phone-list" %}">Back to the list.</a>
+{% endblock %}
