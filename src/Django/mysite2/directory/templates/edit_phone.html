@@ -5,9 +5,9 @@
 
 <form action="{% url "phone-new" %}" method="POST">
   {% csrf_token %}
-  <ul>
-    {{ form.as_ul }}
-  </ul>
+  <table>
+    {{ form.as_table }}
+  </table>
   <input id="phone_person" type="submit" value="Save" />
 </form>
 
