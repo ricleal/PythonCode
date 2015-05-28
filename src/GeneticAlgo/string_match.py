@@ -7,12 +7,13 @@
 
 import random
 import string
+import time
 
-population_size = 1024*8
+population_size = 512*8
 # just 10% (the best) of the organisms from the current generation to carry over to the next, unaltered. 
 elitism_rate = 0.10  
 mutation_rate = 0.25
-target_string = 'In a genetic algorithm, a population of candidate solutions (called individuals, creatures, or phenotypes)'
+target_string = 'Hello Ricardo, how are you today?'
 
 # 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\t\n\x0b\x0c\r '
 all_possible_chars = string.letters + string.digits \
@@ -67,6 +68,7 @@ def mate(population_1, population_2):
 	            + random.choice(all_possible_chars) + (population_2[i])[pos + 1:]
 
 if __name__ == '__main__':
+	start_time = time.time()
 	# population is population_size of random strings of the size target_string
 	population_1 = [randstr() for i in xrange(population_size)]
 	population_2 = [randstr() for i in xrange(population_size)]
@@ -84,3 +86,5 @@ if __name__ == '__main__':
 	    # Swap populations
 	    (population_1, population_2) = (population_2, population_1)
 	    iteration+=1
+	end_time = time.time()
+	print "Total time: %.2f seconds"%(end_time-start_time)
