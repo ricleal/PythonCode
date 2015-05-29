@@ -146,11 +146,11 @@ class plotter:
         if self.im.ndim is 3:
             print 'Drawing...', self.i
             im = self.im[...,self.i]
-            self.ax.set_title('image %s'%self.i)
-            self.ax2.set_title('image %s'%self.i)
+            self.ax.set_title('Linear %s'%self.i)
+            self.ax2.set_title('Log %s'%self.i)
             
         self.cax = self.ax.imshow(im,  interpolation='nearest', cmap=cm.jet,  vmin=self.vmin,  vmax=self.vmax)
-        self.cax2 = self.ax2.imshow(im,  interpolation='nearest', cmap=cm.rainbow,  norm=LogNorm(vmin=0.01,  vmax=1))
+        self.cax2 = self.ax2.imshow(im,  interpolation='nearest', cmap=cm.jet,  norm=LogNorm(vmin=0.01,  vmax=1))
         #self.cax2 = self.ax2.matshow(im, cmap=cm.rainbow, norm=LogNorm(vmin=0.01,  vmax=1))
                 
     def print_event(self,event):
