@@ -19,11 +19,11 @@ def errorfunc(p,x,z):
     err = z - lorentz(p,x)
     return err
 
-n_points = 25
+n_points = 50
 
 p = np.array([0.1, 0, 2.0], dtype=np.double)
 x = np.linspace(-1.5, 1.5, num=n_points, endpoint=True)
-noise = np.random.randn(n_points) * 0.1
+noise = np.random.randn(n_points) * 0.2
 z = lorentz(p,x)
 noisyz = z + noise
 
@@ -51,5 +51,5 @@ plt.plot(x, lorentz(solp,x), 'g--', linewidth=2, label='leastsq fit')
 plt.xlim((-1.5, 1.5))
 plt.ylim((-0.1, 2.1))
 plt.grid(which='major')
-plt.legend(loc=8)
+plt.legend(loc=1)
 plt.show()
