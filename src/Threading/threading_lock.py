@@ -2,12 +2,15 @@
 
 '''
 @author: Ricardo Leal
+
+Threading with Locks
+
 '''
 import time
 import threading
 from datetime import datetime
 
-# Lock
+# declare the lock
 lock = threading.Lock()
 
 

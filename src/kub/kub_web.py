@@ -3,7 +3,7 @@ import bottle
 import tempfile
 import os
 
-def plot(filename='/home/rhf/Downloads/CSVReport.csv'):
+def plot(filename='CSVReport.csv'):
 
     import csv
     import tabular as tb

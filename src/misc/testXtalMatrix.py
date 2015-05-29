@@ -33,7 +33,8 @@ def crystGen(cell):
     sinGamma = np.sin(gamma)
 
     vol=a*b*c*np.sqrt(1.-cosAlpha**2-cosBeta**2-cosGamma**2+2.*cosAlpha*cosBeta*cosGamma)
-
+    
+    # reciprocal latice vectors
     ar=b*c*sinAlpha/vol
     br=a*c*sinBeta/vol
     cr=a*b*sinGamma/vol
@@ -42,6 +43,7 @@ def crystGen(cell):
     cosbetar=(cosAlpha*cosGamma-cosBeta)/(sinAlpha*sinGamma)
     cosgamar=(cosAlpha*cosBeta-cosGamma)/(sinAlpha*sinBeta)
 
+    # reciprocal latice angles
     alfar=np.arccos(cosalfar)
     betar=np.arccos(cosbetar)
     gamar=np.arccos(cosgamar)
@@ -56,7 +58,7 @@ def crystGen(cell):
 
 if __name__ == '__main__':
 
-    cell = np.array([1,1,1,90,90,90])
+    cell = np.array([65,61,89,90,90,120])
     orthogonalMatrix = crystGen(cell)
     print orthogonalMatrix
     

@@ -16,7 +16,7 @@ ELECT_SERVICE_FEE = 14
 GAS_PRICE_THERM = 1.247
 GAS_SERVICE_FEE = 6.65
 
-data = tb.tabarray(SVfile='/home/rhf/Downloads/CSVReport.csv',
+data = tb.tabarray(SVfile='CSVReport.csv',
     delimiter=',', doublequote=True,)
 
 data_elect = data[ data["Service Agreement Type"] == "E-RES" ]
