@@ -5,9 +5,10 @@ import shlex
 import csv
 import ast
 import numpy as np
+import os
 
+FILENAME=os.path.join(os.path.dirname(os.path.realpath(__file__)), "reflection_conditions.csv")
 
-FILENAME="reflection_conditions.csv"
 
 
 class Reflections():
@@ -91,7 +92,6 @@ class SpaceGroup():
     
     
 def test():
-    from unittest2 import *
     import pprint
     ref = Reflections()
     
