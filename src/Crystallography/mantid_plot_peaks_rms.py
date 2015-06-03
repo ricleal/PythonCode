@@ -33,7 +33,7 @@ from mantid.kernel import V3D
 # num_peaks_to_find_for_indexing = 300
 # max_d  = 110
 
-run = 3869
+run = 3870
 unit_cell = [41.5, 63.37, 122.37, 90, 90, 90]
 space_group = ""
 num_peaks_to_find_for_reference = 3000
@@ -225,6 +225,15 @@ while True:
 ## Use in Mantid Plot:
 
 ##
+bin_count_collumn = mtd[peaks_found_ws_name].column('BinCount')
+gui_cmd(plt.figure)
+gui_cmd(plt.plot, bin_count_collumn, distances_vector, 'y.')
+gui_cmd(plt.xlabel, 'BinCount')
+gui_cmd(plt.ylabel, 'Distance (QSample)')
+gui_cmd(plt.show)
+
+
+##
 d_spacing_collumn = mtd[peaks_found_ws_name].column('DSpacing')
 gui_cmd(plt.figure)
 gui_cmd(plt.plot, d_spacing_collumn, distances_vector, 'bo')
@@ -276,4 +285,4 @@ gui_cmd(plt.ylabel, 'Distance (QSample)')
 gui_cmd(plt.legend)
 gui_cmd(plt.show)
 
-#     )
+############3
