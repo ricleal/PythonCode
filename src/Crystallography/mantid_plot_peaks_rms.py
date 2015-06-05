@@ -26,19 +26,19 @@ from mantid.api import *
 from mantid.kernel import V3D
 
 
-# run = 3848
-# unit_cell = [74.0274,     74.2437 ,    99.9710  ,   90   ,  90   , 120]
-# space_group = ""
-# num_peaks_to_find_for_reference = 3000
-# num_peaks_to_find_for_indexing = 300
-# max_d  = 110
-
-run = 3870
-unit_cell = [41.5, 63.37, 122.37, 90, 90, 90]
+run = 3848
+unit_cell = [74.0274,     74.2437 ,    99.9710  ,   90   ,  90   , 120]
 space_group = ""
 num_peaks_to_find_for_reference = 3000
 num_peaks_to_find_for_indexing = 300
-max_d  = 130
+max_d  = 110
+
+# run = 3870
+# unit_cell = [41.5, 63.37, 122.37, 90, 90, 90]
+# space_group = ""
+# num_peaks_to_find_for_reference = 3000
+# num_peaks_to_find_for_indexing = 300
+# max_d  = 130
 
 # run = 4090
 # unit_cell = [36.5, 58.3, 63.6, 90, 90, 90]
@@ -90,8 +90,8 @@ ConvertToMD(
     dEAnalysisMode='Elastic',
     QConversionScales='Q in A^-1',
     LorentzCorrection='1',
-    MinValues='-4,-4,-4', #Q values
-    MaxValues='4,4,4', #Q values
+    MinValues='-3,-3,-3', #Q values
+    MaxValues='3,3,3', #Q values
     SplitInto='2',
     SplitThreshold='50',
     MaxRecursionDepth='11',
