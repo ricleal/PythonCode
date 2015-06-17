@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import ldap
 import getpass
 import sys
 
@@ -9,9 +10,9 @@ Only works on the intranet
 """
 
 
-FERMI_HOST = 'fermi.ornl.gov'
-FERMI_BASE_URL = '/MantidRemote/'
-
+url='ldaps://data.sns.gov/'
+username='uid=%s,ou=Users,dc=sns,dc=ornl,dc=gov'
+cert = '/etc/ssl/certs/ca-certificates.crt'
 
 print "Username?"
 user = sys.stdin.readline()
@@ -21,7 +22,7 @@ pwd = getpass.getpass()
 
 try:
     print "Contacting LDAP...."
-    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+    #ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
     
     ldapmodule_trace_level = 2
     ldapmodule_trace_file = sys.stderr
