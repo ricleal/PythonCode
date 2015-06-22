@@ -92,7 +92,6 @@ class SpaceGroup():
     
     
 def test():
-    from unittest2 import *
     import pprint
     ref = Reflections()
     
