@@ -18,6 +18,7 @@ std = numpy.sqrt(counts)
 #Plot Data
 
 pylab.subplot(2, 1, 1)
+pylab.title("Raw Data")
 pylab.errorbar(x,counts,std, fmt='o')
 pylab.xlabel('x (units)')
 pylab.ylabel('Counts')
@@ -48,6 +49,7 @@ print "E=", ans[4], "+/-", numpy.sqrt(cov[4][4])
 #Plot data, best-fit model, and residual
 model = gaussian_with_background(x,ans[0], ans[1], ans[2], ans[3], ans[4])
 pylab.subplot(2, 1, 2)
+pylab.title("Fitting")
 pylab.plot(x, model, label='Model')
 pylab.errorbar(x, counts, std, label='Data', fmt='o')
 residual = counts - model

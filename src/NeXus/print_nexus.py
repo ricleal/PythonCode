@@ -8,12 +8,6 @@ Created on August 2012
 import nxs, os, sys
 import numpy as np
 
-'''
-
-
-
-'''
-
 def _show(f, indent=0):
     prefix = ' ' * indent
     link = f.link()
