@@ -94,12 +94,12 @@ def check_update(url='http://www.sasview.org/latestversion.json', timeout=1):
     req = urllib2.Request(url)
     try:
         print "* Direct connection..."
-        res = urllib2.urlopen(req,  timeout=timeout)
+        res = urllib2.urlopen(req, timeout=timeout)
     except:
         try:
             print "** Proxy connection..."
             set_proxy()
-            res = urllib2.urlopen(req,  timeout=timeout)
+            res = urllib2.urlopen(req, timeout=timeout)
         except:
             print "*** Pac Proxy connection..."
             pac_urls = get_urls_for_pac_files()
@@ -108,18 +108,18 @@ def check_update(url='http://www.sasview.org/latestversion.json', timeout=1):
                 print "**** Trying proxy:", proxy
                 try:
                     set_proxy(proxy)
-                    res = urllib2.urlopen(req,  timeout=timeout)
+                    res = urllib2.urlopen(req, timeout=timeout)
                     break  # suceeded!
                 except Exception, e:
                     print "**** This proxy doesn't work...", proxy
                     pprint(e)
     if res is not None:
-        print 50*'-'
+        print 50 * '-'
         print 'Got it!! ::', url
-        print 50*'-'
+        print 50 * '-'
         content = json.loads(res.read().strip())
         pprint(content)
-        print 50*'-'
+        print 50 * '-'
 
 if __name__ == "__main__":
     check_update()
