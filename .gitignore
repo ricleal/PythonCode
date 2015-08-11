@@ -40,4 +40,5 @@ nosetests.xml
  
 lamp.cds
 .settings
+.ipynb_checkpoints
 
