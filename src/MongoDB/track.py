@@ -26,11 +26,11 @@ class DB(object):
     def insert (self,**params):
         self.track.insert_one(params)
 
-    def __del__(self):
-        '''
-        Drop the collection on exit just for testing
-        '''
-        self.track.drop()
+#     def __del__(self):
+#         '''
+#         Drop the collection on exit just for testing
+#         '''
+#         self.track.drop()
 
 db = DB(instrument_name='seq', db_name = 'temp')
 
