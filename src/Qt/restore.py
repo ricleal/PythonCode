@@ -2,14 +2,13 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui  import *
 import sys
 
-class MyMainWindow(QMainWindow):
+class MyMainWindow(QWidget):
 
     def __init__(self, parent=None):
 
         super(MyMainWindow, self).__init__(parent)
         self.form_widget = FormWidget(self)
-        self.setCentralWidget(self.form_widget)
-        self.resize(430, 400)
+        self.resize(400, 400)
         self.restoreMainWindowState()
 
     def restoreMainWindowState(self):
@@ -17,13 +16,9 @@ class MyMainWindow(QMainWindow):
         # Save state to: ~/.config/MyCompany/MyApp.con
         #self.settings = QSettings("MyCompany", "MyApp")
         self.settings = QSettings("/tmp/myapp.ini",QSettings.IniFormat)
-        self.restoreGeometry(self.settings.value("geometry").toByteArray())
-        self.restoreState(self.settings.value("windowState").toByteArray())
         self.form_widget.textbox_restore_state(self.settings)
 
     def saveMainWindowState(self):
-        self.settings.setValue("geometry", self.saveGeometry())
-        self.settings.setValue("windowState", self.saveState())
         self.form_widget.textbox_save_state(self.settings)
 
     def closeEvent(self, event):
