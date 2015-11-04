@@ -2,6 +2,8 @@
 Created on Aug 5, 2013
 
 @author: leal
+
+Play with globals
 '''
 
 import a
