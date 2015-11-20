@@ -1,10 +1,17 @@
+# -*- coding: utf-8 -*-
 #!/usr/bin/env python
 
 """
+Finds K (scale factor) + b to superimpose these 2 curves!)
 
-Curves y1 and y2
+I(scaled) = f * I(original) – b 
 
-Finds K (scale factor) to superimpose these 2 curves!)
+Needs packages:
+pandas
+scipy
+matplotlib
+numpy
+tabulate
 
 """
 import sys
@@ -15,6 +22,9 @@ import matplotlib.pyplot as plt
 from scipy import interpolate
 from scipy.optimize import leastsq
 from pprint import pprint
+from tabulate import tabulate
+from operator import itemgetter
+
 def residuals(p, x, f_target, f_to_optimise):
     """
     
@@ -47,12 +57,13 @@ def main(glob_pattern):
     if len(files) == 0:
         print "No files found!"
         return
+    
     dfs = []
     for file in files:
         df = pd.read_csv(file, skiprows=[0,1], names=['X', 'Y', 'E', 'DX'])
         print file, df.shape, df.columns
-        df.insert(len(df.columns), "xlog", np.log(df['X']))
-        df.insert(len(df.columns), "ylog", np.log(df['Y']))
+#         df.insert(len(df.columns), "xlog", np.log(df['X']))
+#         df.insert(len(df.columns), "ylog", np.log(df['Y']))
         dfs.append(df)
     
     new_plot(dfs,['X','Y'],files,"Linear")
@@ -93,21 +104,27 @@ def main(glob_pattern):
     fig_log = plt.figure("Fits Log")
     ax_log = fig_log.add_subplot(111)
     
+    table = []
     # Let's get the scale factors
     for idx,(df,f,file) in enumerate(zip(dfs,fs,files)):
         if idx == df_with_max_value:
             ax_linear.plot(x,f(x),label=file + " (Ref)")
             ax_log.plot(np.log(x),np.log(f(x)),label=file + " (Ref)")
+            table.append([file,0,0,0,0])
         else:
             plsq, cov, infodict,mesg,ier = leastsq(residuals, [1,-1], args=(x,fs[df_with_max_value],f),full_output=True)
             print "Solution Found!" if ier in [1, 2, 3,4] else "Solution NOT Found!"
             print "\t", file, ": [K,b] =",plsq
-            print "\tErrors for [K,b] =", np.sqrt(np.diag(cov))
+            errors = np.sqrt(np.diag(cov))
+            print "\tErrors for [K,b] =", errors 
             ax_linear.plot(x,peval(x,f,plsq), '-', label='%s K=%.2f b=%.2f'%(file,plsq[0],plsq[1]))
             ax_log.loglog(x,peval(x,f,plsq), '-', label='%s K=%.2f b=%.2f'%(file,plsq[0],plsq[1]))
+            table.append([file,plsq[0],errors[0],plsq[1],errors[1]])
     ax_linear.legend(loc=1)
     ax_log.grid(True,which="both")
     ax_log.legend(loc='lower left')
+    
+    print tabulate(sorted(table, key=itemgetter(0)), headers=["File","K", "Err(K)","b","Err(b)"], floatfmt=".4f")
     
     plt.show()
     
