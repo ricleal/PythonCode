@@ -1,7 +1,7 @@
 import numpy # numerical python (matrices etc)
 import pylab # plotting
 import scipy.stats.stats # scientific python
-
+from pprint import pprint
 '''
 From: https://wiki.pha.jhu.edu/advlab_wiki/index.php/Analysis_4
 '''
@@ -51,7 +51,7 @@ pylab.xlim([-.5, 4.5])
 #
 
 data = mean
-print "data shape", data.shape
+print "Data shape", data.shape
 N_inv = numpy.diag(1/var_on_mean)  # diag function creates a diagonal matrix
 print "N_inv shape", N_inv.shape
 
@@ -91,8 +91,8 @@ pylab.ylabel('Altitude (m)', fontsize=font_size)
 #Chi-squared
 
 residual = data - numpy.dot(M, x_ml)
-print residual
-print residual**2
+pprint(residual)
+pprint(residual**2)
 print var
 chisq = numpy.sum(residual**2 / var_on_mean)
 dof = len(residual)-3 # 3 parameters

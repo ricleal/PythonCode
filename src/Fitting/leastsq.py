@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import leastsq as optimizer
+from scipy.optimize import leastsq
 
 def rmsd(a,b):
     return np.sqrt((a-b)**2)
@@ -31,7 +31,7 @@ print 'Guess:\t',np.array(p0)
 # [  8.      43.4783   1.0472]
 
 
-plsq = optimizer(residuals, p0, args=(y_meas, x))
+plsq = leastsq(residuals, p0, args=(y_meas, x))
 print 'Found:\t',plsq[0]
 # [ 10.9437  33.3605   0.5834]
 
