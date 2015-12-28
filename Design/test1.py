@@ -5,6 +5,7 @@
 
 Getting the child classes instantiating a the Base.
 Every child must have a category name
+A child class is instantiated from the Base with a category argument
 '''
 
 class Base(object):
@@ -33,6 +34,14 @@ class ChildB(Base):
 		print 'func for Category B'
 
 if __name__ == '__main__':
+	"""
+	Outputs:
+	Init for Category A ('A',) {}
+	func for Category A
+	<class '__main__.ChildA'>
+	func for Category B
+	<class '__main__.ChildB'>
+	"""
 	a = Base('A')
 	a.func()
 	print type(a)

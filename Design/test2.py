@@ -2,7 +2,10 @@
 # -*- coding: utf-8 -*-
 
 '''
-Sort of factory with manual registration
+Sort of factory with manual registration.
+
+Registrar dictionary has pairs <name,class>
+
 '''
 
 import abc
@@ -19,7 +22,7 @@ class Base(object):
 
 
 class ChildA(Base):
-    
+
     def __init__(self):
         super(ChildA, self).__init__()
         print 'Init for Category A'
@@ -28,11 +31,11 @@ class ChildA(Base):
         print 'func for Category A'
 
 class ChildB(Base):
-    
+
     def __init__(self):
         super(ChildB, self).__init__()
         print 'Init for Category B'
-    
+
     def func(self):
         print 'func for Category B'
 
@@ -41,6 +44,15 @@ Registrar = {'a': ChildA, 'b': ChildB}
 
 
 if __name__ == '__main__':
+    '''
+    Output:
+    Some Super initialisation...
+    Init for Category A
+    func for Category A
+    Some Super initialisation...
+    Init for Category B
+    func for Category B
+    '''
     a = Registrar['a']()
     a.func()
 

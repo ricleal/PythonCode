@@ -61,15 +61,37 @@ class ChildB(Base):
 
 
 if __name__ == '__main__':
+    '''
+    Init for RegistryMeta: Base
+    Init for RegistryMeta: ChildA
+    Init for RegistryMeta: ChildB
+    Start...
+    {'childa': <class '__main__.ChildA'>, 'childb': <class '__main__.ChildB'>}
+    Some Super initialisation...
+    Init for Category A
+    func for Category A
+    Some Super initialisation...
+    Init for Category A
+    func for Category A
+    Some Super initialisation...
+    Init for Category B
+    func for Category B
+    Some Super initialisation...
+    Init for Category B
+    func for Category B
+    End!
+    '''
     print 'Start...'
     print Base.registry
     a1 = ChildA()
     a1.func()
+    # Same as: ChildA()
     a2 = Base.registry['childa']()
     a2.func()
     ##
     b1 = ChildB()
     b1.func()
+    # Same as: ChildB()
     b2 = Base.registry['childb']()
     b2.func()
     print 'End!'
