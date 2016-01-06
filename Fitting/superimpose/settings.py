@@ -16,8 +16,8 @@ def get_parse_args():
     parse command line input arguments
     '''
     parser = argparse.ArgumentParser(description='Calculates: I_{scaled}(Q) = K*I(Q)+b')
-    parser.add_argument('-r', '--reference', help='File to use as reference to scale all curves', required=True)
-    parser.add_argument('-i', '--input', help='Input files (if reference is included it will ignored)', required=True)
+    parser.add_argument('-r', '--reference', help='File used as reference to scale all curves', required=True)
+    parser.add_argument('-i', '--input', help='Input files (if the reference file is included here it will ignored). Use wildcards, e.g., \'xpto_*\'.', required=True)
     parser.add_argument('-q', '--qmin', help='Q min. If not given, gets it from the config file.', required=False, type=float, default=config.getfloat('General','qmin'))
     parser.add_argument('-m', '--qmax', help='Q max. If not given, gets it from the config file.', required=False, type=float, default=config.getfloat('General','qmax'))
     args = vars(parser.parse_args())

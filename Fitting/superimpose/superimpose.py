@@ -44,41 +44,47 @@ def peval(x,f,p):
     return k*f(x)-b
 
 
-def new_plot(dfs,col_names,labels,title):
-    plt.figure(title)
+def plot_dataframes(dfs,headers,labels,title,plot_type='linear'):
+    '''
+    Plot a list of dataframes.
+    @param headers: must be a list of 2 items with valid dataframe headers: ['X','Y']
+    @param labels: Labels to use in the plot legend. Same length as list of dataframes. 
+    @param plot_type: either linear or log
+    new_plot(dfs,['X','Y'],filenames,"Linear")
+    '''
+    fig = plt.figure(title)
+    ax = fig.add_subplot(111)
     for (df,label) in zip(dfs,labels):
-        plt.plot(df[col_names[0]],df[col_names[1]],label=label)
-    plt.legend(loc=1)
-
-def new_plot_log(dfs,col_names,labels,title):
-    plt.figure(title)
-    for (df,label) in zip(dfs,labels):
-        plt.loglog(df[col_names[0]],df[col_names[1]],label=label)
-    plt.grid(True,which="both")
-    plt.legend(loc='lower left')
-
-def create_dataframes(files, headers=['X', 'Y', 'E', 'DX']):
+        if plot_type is 'linear':
+            ax.plot(df[headers[0]],df[headers[1]],label=label)
+        else:
+            ax.loglog(df[headers[0]],df[headers[1]],label=label)
+    ax.grid(True,which="both")
+    ax.legend(loc='best')
+    return ax
+    
+def create_dataframes(filenames, headers=['X', 'Y', 'E', 'DX']):
     '''
     Parses the CSV files into Pandas Dataframes
     @param headers: List of headers present in the file 
     @return: list of dataframes
     '''
     dfs = []
-    for file in files:
-        df = pd.read_csv(file, skiprows=[0,1], names=headers)
-        logger.debug("File: %s; Shape: %s; Header: %s" % (file, df.shape, df.columns.values))
+    for filename in filenames:
+        df = pd.read_csv(filename, skiprows=[0,1], names=headers)
+        df.filename = filename
+        logger.debug("File: %s; Shape: %s; Header: %s" % (filename, df.shape, df.columns.values))
         dfs.append(df)
     return dfs
 
-def find_q_range(dfs, n_points = 200):
+def find_q_range(dfs):
     '''
     Loop over all dataframes, find mins and maxs
     and find a :
         common minimal (max of all minimums)
         common maximal (min of all maximums)
-    Creates a range of n_points within those limits
     @param dfs : list of pandas dataframes
-    @return: Q range formed by n_points
+    @return: Q range [min,max]
     '''
     
     mins =[]
@@ -95,9 +101,7 @@ def find_q_range(dfs, n_points = 200):
         x_min = q_min
     if q_max < x_max:
         x_max = q_max
-    x = np.linspace(x_min, x_max, n_points)
-    logger.info("Using Q range: %.4f - %.4f"%(x_min,x_max))
-    return x
+    return x_min,x_max
 
 def create_interpolate_functions(dfs, x_header='X', y_header='Y'):
     '''
@@ -110,63 +114,87 @@ def create_interpolate_functions(dfs, x_header='X', y_header='Y'):
         f = interpolate.interp1d(df[x_header], df[y_header])
         fs.append(f)
     return fs;
-    
+
+def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
+    '''
+    Fit all datasets to the reference
+    @return: fitting params and the covariance matrix 
+    '''
+    plsqs = []
+    covs = []
+    q_min,q_max = find_q_range(dfs) 
+    for idx,(df,interpolate_function) in enumerate(zip(dfs,interpolate_functions)):
+        logger.debug("***** Fitting %s"%df.filename)
+        # Find a common q_range for all data sets 
+        q_range = np.linspace(q_min, q_max, len(df.index))        
+        if idx != reference_idx:
+            plsq, cov, infodict,mesg,ier = optimize.leastsq(residuals, [1,1], 
+                                                            args=(q_range,interpolate_functions[reference_idx],interpolate_function),full_output=True)
+            logger.info(mesg)
+            y = peval(q_range,interpolate_function,plsq)                        
+            df['q_range'] = pd.Series(q_range, index=df.index)
+            df['y_range_fit'] = pd.Series(y, index=df.index)
+            y = peval(df['X'],interpolate_function,plsq)
+            df['y_fit'] = pd.Series(y, index=df.index)
+            plsqs.append(plsq)
+            covs.append(cov)
+        else:
+            df['q_range'] = pd.Series(q_range, index=df.index)
+            y = interpolate_function(q_range)
+            df['y_range_fit'] = pd.Series(y, index=df.index)
+            y = interpolate_function(df['X'])
+            df['y_fit'] = pd.Series(y, index=df.index)
+            plsqs.append(None)
+            covs.append(None)
+    return plsqs, covs
+
+def create_summary_table(plsqs, covs, filenames):
+    table = []
+    for plsq, cov,filename in zip(plsqs, covs,filenames):
+        if plsq is None or cov is None:
+            table.append([filename,0,0,0,0])
+        else:
+            errors = np.sqrt(np.diag(cov))
+            table.append([filename,plsq[0],errors[0],plsq[1],errors[1]])
+    logger.info( "\n%s" % tabulate(sorted(table, key=itemgetter(0)), headers=["File","K", "Err(K)","b","Err(b)"], floatfmt=".4f") )
+    return table
 
 def main(argv):
     
-    reference = args['reference']
-    files = glob.glob(args['input'])
-    if len(files) == 0:
+    reference_filename = args['reference']
+    filenames = glob.glob(args['input'])
+    if len(filenames) == 0:
         logger.error("No files found!")
         return
     # Reference:
-    if reference not in files:
-        files.append(reference)
-    files = sorted(files)
-    reference_idx = files.index(reference)
-    logger.debug("Reference: %s (%s)"%(reference, reference_idx))
+    if reference_filename not in filenames:
+        filenames.append(reference_filename)
+    filenames = sorted(filenames)
+    reference_idx = filenames.index(reference_filename)
+    logger.debug("Reference: %s (%s)"%(reference_filename, reference_idx))
     
     # Put the file content in dataframes
-    dfs = create_dataframes(files)
+    dfs = create_dataframes(filenames)
 
-    # Let's plot the raw data
-    new_plot(dfs,['X','Y'],files,"Linear")
-    new_plot_log(dfs,['X','Y'],files,"Log")
+    # Let's plot the raw data   
+    plot_dataframes(dfs,['X','Y'],filenames,"Raw Linear")
+    plot_dataframes(dfs,['X','Y'],filenames,"Raw Log",plot_type='log')
     
     # Interpolate functions
     interpolate_functions = create_interpolate_functions(dfs)
     
-    # Find a common q_range for all data sets 
-    q_range = find_q_range(dfs)
+    # Fitting!
+    plsqs, covs = append_fit_to_dfs(dfs, reference_idx, interpolate_functions,)
     
-    # Fitting    
-    fig_linear = plt.figure("Fits Linear")
-    ax_linear = fig_linear.add_subplot(111)
-    fig_log = plt.figure("Fits Log")
-    ax_log = fig_log.add_subplot(111)
+    # Plot results
+    plot_dataframes(dfs,['q_range','y_range_fit'],filenames,"Fit Linear Q Range")
+    plot_dataframes(dfs,['q_range','y_range_fit'],filenames,"Fit Log Q Range", plot_type='log')
+
+    plot_dataframes(dfs,['X','y_fit'],filenames,"Fit Linear")
+    plot_dataframes(dfs,['X','y_fit'],filenames,"Fit Log", plot_type='log')
     
-    table = []
-    # Let's get the scale factors
-    for idx,(df,interpolate_function,filename) in enumerate(zip(dfs,interpolate_functions,files)):
-        if idx == reference_idx:
-            ax_linear.plot(q_range,interpolate_function(q_range),label=filename + " (Ref)")
-            ax_log.plot(np.log(q_range),np.log(interpolate_function(q_range)),label=filename + " (Ref)")
-            table.append([filename,0,0,0,0])
-        else:
-            plsq, cov, infodict,mesg,ier = optimize.leastsq(residuals, [1,1], 
-                                                            args=(q_range,interpolate_functions[reference_idx],interpolate_function),full_output=True)
-            logger.debug("Solution Found for %s. %s"%(filename,mesg)) if ier in [1, 2, 3,4] else logger.warning("Solution NOT Found for %s. %s"%(filename,mesg))
-            errors = np.sqrt(np.diag(cov))
-            y = peval(q_range,interpolate_function,plsq)
-            ax_linear.plot(q_range,y, '-', label='%s K=%.2f b=%.2f'%(filename,plsq[0],plsq[1]))
-            ax_log.set_xlim(q_range[0],q_range[-1])
-            ax_log.loglog(q_range,y, '-', label='%s K=%.2f b=%.2f'%(filename,plsq[0],plsq[1]))
-            table.append([filename,plsq[0],errors[0],plsq[1],errors[1]])
-    ax_linear.legend(loc=0)
-    ax_log.grid(True,which="both")
-    ax_log.legend(loc=0)#'lower left')
-    
-    logger.info( "\n%s" % tabulate(sorted(table, key=itemgetter(0)), headers=["File","K", "Err(K)","b","Err(b)"], floatfmt=".4f") )
+    # Table with results
+    create_summary_table(plsqs, covs, filenames)
     
     plt.show()
     
