@@ -30,19 +30,29 @@ from operator import itemgetter
 import os.path
 
 
-def residuals(p, x, f_target, f_to_optimise):
+def residuals(p, x, f_target, f_to_optimise,k=None,b=None):
     """
-    
+    k and p are mutually exclusive
     """
-    k,b = p  
+    if k is not None:
+        b = p[0]
+    elif b is not None:
+        k = p[0]
+    else:
+        k,b = p  
     err = f_target(x)-(k*f_to_optimise(x)-b)
     #return np.sum(err**2)
     return err 
 
 
 
-def peval(x,f,p):
-    k,b = p
+def peval(x,f,p,k=None,b=None):
+    if k is not None:
+        b = p[0]
+    elif b is not None:
+        k = p[0]
+    else:
+        k,b = p  
     return k*f(x)-b
 
 
@@ -143,12 +153,6 @@ def create_interpolate_functions(dfs, x_header='X', y_header='Y'):
     return fs;
 
 
-def fit(x, f_target, f_to_optimise, guess = [1,1]):
-    '''
-    '''
-    plsq, cov, infodict, mesg, ier = optimize.leastsq(residuals, guess, 
-                                                     args=(x,f_target, f_to_optimise),full_output=True)
-    return plsq, cov, mesg
             
 def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
     '''
@@ -163,12 +167,16 @@ def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
         # Find a common q_range for all data sets 
         q_range = np.linspace(q_min, q_max, len(df.index))        
         if idx != reference_idx:            
-            plsq, cov, mesg = fit(q_range,interpolate_functions[reference_idx],interpolate_function)
+            plsq, cov, infodict,mesg,ier = optimize.leastsq(residuals,
+                                                            ([1,1] if args['k'] is None and args['b'] is None else [1]), # guess
+                                                            args=(q_range,interpolate_functions[reference_idx],interpolate_function,
+                                                                  args['k'],args['b']),
+                                                            full_output=True)
             logger.info(mesg)
-            y = peval(q_range,interpolate_function,plsq)                        
+            y = peval(q_range,interpolate_function,plsq,k=args['k'],b=args['b'])                        
             df['q_range'] = pd.Series(q_range, index=df.index)
             df['y_range_fit'] = pd.Series(y, index=df.index)
-            y = peval(df['X'],interpolate_function,plsq)
+            y = peval(df['X'],interpolate_function,plsq,k=args['k'],b=args['b'])
             df['y_fit'] = pd.Series(y, index=df.index)
             plsqs.append(plsq)
             covs.append(cov)
@@ -189,7 +197,12 @@ def create_summary_table(plsqs, covs, filenames):
             table.append([filename,0,0,0,0])
         else:
             errors = np.sqrt(np.diag(cov))
-            table.append([filename,plsq[0],errors[0],plsq[1],errors[1]])
+            if args['k'] is not None:
+                table.append([filename,args['k'],0,plsq[0],errors[0]])
+            elif args['b'] is not None:
+                table.append([filename,plsq[0],errors[0],args['b'],0])
+            else:
+                table.append([filename,plsq[0],errors[0],plsq[1],errors[1]])
     logger.info( "\n%s" % tabulate(sorted(table, key=itemgetter(0)), headers=["File","K", "Err(K)","b","Err(b)"], floatfmt=".4f") )
     return table
 
@@ -229,11 +242,11 @@ def main(argv):
     plot_dataframes(dfs,['X','y_fit'],filenames,"Fit Linear")
     plot_dataframes(dfs,['X','y_fit'],filenames,"Fit Log", plot_type='log')
     
+    # Save results
+    if not args['no_save']: save_as_csv(dfs)
+    
     # Table with results
     create_summary_table(plsqs, covs, filenames)
-    
-    print "****", args['no_save']
-    if not args['no_save']: save_as_csv(dfs)
         
     plt.show()
     
