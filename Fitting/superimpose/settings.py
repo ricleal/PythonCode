@@ -20,6 +20,11 @@ def get_parse_args():
     parser.add_argument('-i', '--input', help='Input files (if the reference file is included here it will ignored). Use wildcards, e.g., \'xpto_*\'.', required=True)
     parser.add_argument('-q', '--qmin', help='Q min. If not given, gets it from the config file.', required=False, type=float, default=config.getfloat('General','qmin'))
     parser.add_argument('-m', '--qmax', help='Q max. If not given, gets it from the config file.', required=False, type=float, default=config.getfloat('General','qmax'))
+    parser.add_argument('-g', '--discard-begin', help='Discard n points from the beginning of every dataset.', required=False, type=int, default=config.getfloat('General','discard_points_begin'))
+    parser.add_argument('-e', '--discard-end', help='Discard n points from the end of every dataset.', required=False, type=int, default=config.getfloat('General','discard_points_end'))
+    parser.add_argument('-n', '--no-save', action='store_true', help='Do not save the scaled datasets as _scaled.csv.', required=False, default=(not config.getboolean('General','save_scaled_files')))
+    parser.add_argument('-k', help='Default K value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
+    parser.add_argument('-b', help='Default b value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
     args = vars(parser.parse_args())
     return args
 

@@ -27,17 +27,19 @@ import scipy.optimize as optimize
 from pprint import pprint
 from tabulate import tabulate
 from operator import itemgetter
-
+import os.path
 
 
 def residuals(p, x, f_target, f_to_optimise):
     """
     
     """
-    k,b = p
+    k,b = p  
     err = f_target(x)-(k*f_to_optimise(x)-b)
     #return np.sum(err**2)
     return err 
+
+
 
 def peval(x,f,p):
     k,b = p
@@ -73,9 +75,34 @@ def create_dataframes(filenames, headers=['X', 'Y', 'E', 'DX']):
     for filename in filenames:
         df = pd.read_csv(filename, skiprows=[0,1], names=headers)
         df.filename = filename
-        logger.debug("File: %s; Shape: %s; Header: %s" % (filename, df.shape, df.columns.values))
+        df.fullpath = os.path.abspath(filename)
+        logger.debug("File: %s; Shape: %s; Header: %s" % (df.fullpath, df.shape, df.columns.values))
         dfs.append(df)
     return dfs
+
+def discard_points(dfs,begin,end):
+    '''
+    Remove from the list of dataframes
+    the first and last n points
+    @param begin: n points to remove at the beginning
+    @param end: n points to remove at the end
+    '''
+    for df in dfs:
+        if begin > 0:
+            df.drop(df.index[0:begin],inplace=True)
+        if end > 0:
+            df.drop(df.index[-end:],inplace=True)
+        logger.debug("File: %s; New Shape: %s." % (df.filename, df.shape))
+    return dfs
+
+def save_as_csv(dfs,suffix='_scaled.csv'):
+    for df in dfs:
+        file_path_prefix, _ = os.path.splitext(df.fullpath)
+        csv_path = file_path_prefix + suffix
+        df.to_csv(csv_path)
+        logger.debug("CSV File saved to %s"%csv_path)
+    return dfs
+    
 
 def find_q_range(dfs):
     '''
@@ -115,6 +142,14 @@ def create_interpolate_functions(dfs, x_header='X', y_header='Y'):
         fs.append(f)
     return fs;
 
+
+def fit(x, f_target, f_to_optimise, guess = [1,1]):
+    '''
+    '''
+    plsq, cov, infodict, mesg, ier = optimize.leastsq(residuals, guess, 
+                                                     args=(x,f_target, f_to_optimise),full_output=True)
+    return plsq, cov, mesg
+            
 def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
     '''
     Fit all datasets to the reference
@@ -127,9 +162,8 @@ def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
         logger.debug("***** Fitting %s"%df.filename)
         # Find a common q_range for all data sets 
         q_range = np.linspace(q_min, q_max, len(df.index))        
-        if idx != reference_idx:
-            plsq, cov, infodict,mesg,ier = optimize.leastsq(residuals, [1,1], 
-                                                            args=(q_range,interpolate_functions[reference_idx],interpolate_function),full_output=True)
+        if idx != reference_idx:            
+            plsq, cov, mesg = fit(q_range,interpolate_functions[reference_idx],interpolate_function)
             logger.info(mesg)
             y = peval(q_range,interpolate_function,plsq)                        
             df['q_range'] = pd.Series(q_range, index=df.index)
@@ -176,6 +210,8 @@ def main(argv):
     # Put the file content in dataframes
     dfs = create_dataframes(filenames)
 
+    dfs = discard_points(dfs,args['discard_begin'],args['discard_end'])
+    
     # Let's plot the raw data   
     plot_dataframes(dfs,['X','Y'],filenames,"Raw Linear")
     plot_dataframes(dfs,['X','Y'],filenames,"Raw Log",plot_type='log')
@@ -196,6 +232,9 @@ def main(argv):
     # Table with results
     create_summary_table(plsqs, covs, filenames)
     
+    print "****", args['no_save']
+    if not args['no_save']: save_as_csv(dfs)
+        
     plt.show()
     
 
