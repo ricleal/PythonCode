@@ -26,13 +26,13 @@ class Phone(models.Model):
     (1, 'Mobile'),
     (2, 'Work'),
     (3, 'Other'),)
-    
+
     name = models.ForeignKey(Name)
-    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', 
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$',
     	message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
     phone_number = models.CharField(max_length=20, validators=[phone_regex], blank=True) # validators should be a list
-    phone_type = models.IntegerField(max_length=1, default=0, choices=MAYBECHOICE)
+    phone_type = models.IntegerField(default=0, choices=MAYBECHOICE)
     phone_priority = models.IntegerField(default=0)
-    
+
     def __unicode__(self):
         return str(self.phone_number)
