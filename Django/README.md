@@ -36,7 +36,7 @@ mysite2/settings.py
 mysite2/urls.py
 ```
 
-Add Logging info in: 
+Add Logging info in:
 ```
 mysite2/settings.py
 ```
@@ -57,7 +57,7 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-Test it: 
+Test it:
 
 ```
 python manage.py runserver
@@ -87,3 +87,7 @@ python manage.py runserver
 Test:
 http://localhost:8000/directory/person/
 http://localhost:8000/directory/phone/
+
+# My Site 3
+
+Test using the https://github.com/jqueryfiletree/jqueryfiletree
