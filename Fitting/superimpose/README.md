@@ -34,7 +34,9 @@ $ ./superimpose.py -h
 
 ```
 usage: superimpose.py [-h] -r REFERENCE -i INPUT [-q QMIN] [-m QMAX]
-                      [-g DISCARD_BEGIN] [-e DISCARD_END] [-n] [-k K] [-b B]
+                      [-g DISCARD_BEGIN] [-e DISCARD_END] [-n]
+                      [-k K | --k-list K_LIST [K_LIST ...]]
+                      [-b B | --b-list B_LIST [B_LIST ...]]
 
 Calculates: I_{scaled}(Q) = K*I(Q)+b
 
@@ -53,8 +55,11 @@ optional arguments:
                         Discard n points from the end of every dataset.
   -n, --no-save         Do not save the scaled datasets as _scaled.csv.
   -k K                  Default K value for I_{scaled}(Q) = K*I(Q)+b.
+  --k-list K_LIST [K_LIST ...]
+                        List of K values. Must be the same lenght has data -1
   -b B                  Default b value for I_{scaled}(Q) = K*I(Q)+b.
-
+  --b-list B_LIST [B_LIST ...]
+                        List of B values. Must be the same lenght has data -1
 ```
 
 ## Usage Examples
@@ -86,6 +91,41 @@ python superimpose.py -r data_2/Si_4m6A_abs_1.txt -i 'data_2/Si_4m6A_abs_*' --qm
 ```
 
 ## Instalation
+
+### Best
+
+
+Update pip and install virtual env:
+
+```
+pip install --upgrade pip --user
+pip install virtualenv --user
+```
+
+Go to the folder where you have the code:
+```
+cd superimpose/
+# create a virtual enviroment and activate it
+virtualenv env
+source ./env/bin/activate
+# install dependencies
+pip install -r requirements.txt
+# test it
+./superimpose -h
+```
+
+Remember, everytime you need to launch the programme you need to activate the virtual environment:
+
+```
+cd superimpose/
+source ./env/bin/activate
+./superimpose -h
+```
+
+
+
+
+### Alternative
 
 If needed, install missing packages with ```pip```:
 
