@@ -23,8 +23,15 @@ def get_parse_args():
     parser.add_argument('-g', '--discard-begin', help='Discard n points from the beginning of every dataset.', required=False, type=int, default=config.getfloat('General','discard_points_begin'))
     parser.add_argument('-e', '--discard-end', help='Discard n points from the end of every dataset.', required=False, type=int, default=config.getfloat('General','discard_points_end'))
     parser.add_argument('-n', '--no-save', action='store_true', help='Do not save the scaled datasets as _scaled.csv.', required=False, default=(not config.getboolean('General','save_scaled_files')))
-    parser.add_argument('-k', help='Default K value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
-    parser.add_argument('-b', help='Default b value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
+    
+    groupk = parser.add_mutually_exclusive_group()
+    groupk.add_argument('-k', help='Default K value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
+    groupk.add_argument('--k-list', nargs='+', help='List of K values. Must be the same lenght has data -1', required=False)
+    
+    groupb = parser.add_mutually_exclusive_group()
+    groupb.add_argument('-b', help='Default b value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
+    groupb.add_argument('--b-list', nargs='+', help='List of B values. Must be the same lenght has data -1', required=False)
+    
     args = vars(parser.parse_args())
     return args
 

@@ -44,8 +44,6 @@ def residuals(p, x, f_target, f_to_optimise,k=None,b=None):
     #return np.sum(err**2)
     return err 
 
-
-
 def peval(x,f,p,k=None,b=None):
     if k is not None:
         b = p[0]
@@ -230,7 +228,7 @@ def main(argv):
     plot_dataframes(dfs,['X','Y'],filenames,"Raw Log",plot_type='log')
     
     # Interpolate functions
-    interpolate_functions = create_interpolate_functions(dfs)
+    interpolate_functions = create_interpolate_functions(dfs, x_header='X', y_header='Y')
     
     # Fitting!
     plsqs, covs = append_fit_to_dfs(dfs, reference_idx, interpolate_functions,)

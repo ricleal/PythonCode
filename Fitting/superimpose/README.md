@@ -6,6 +6,8 @@ Finds K (scale factor) + b to superimpose all the curves given as parameters
 I(scaled) = f * I(original) – b
 ```
 
+## Dependencies
+
 Needs packages:
 - pandas
 - scipy
@@ -13,6 +15,7 @@ Needs packages:
 - numpy
 - tabulate
 
+## Customisation
 
 If needed change defaults in ```config.cfg```:
 ```
@@ -21,10 +24,15 @@ qmin = 0.0001
 qmax = 1.0
 ```
 
-Help:
+## Help
+
+Type:
+
+```bash
+$ ./superimpose.py -h
+```
 
 ```
-$ ./superimpose.py -h
 usage: superimpose.py [-h] -r REFERENCE -i INPUT [-q QMIN] [-m QMAX]
                       [-g DISCARD_BEGIN] [-e DISCARD_END] [-n] [-k K] [-b B]
 
@@ -49,6 +57,8 @@ optional arguments:
 
 ```
 
+## Usage Examples
+
 Run as:
 
 ```
@@ -67,6 +77,8 @@ python superimpose.py -r data_2/Si_4m6A_abs_1.txt -i 'data_2/Si_4m6A_abs_*' --qm
 # Forces b to be 0.1
 ./superimpose.py  -r data_1/Si_8m12A_abs_1.txt -i 'data_1/Si_8m12A_abs_*txt' --qmin 0.01 --qmax 0.04 -b 0.1
 ```
+
+## Instalation
 
 If needed, install missing packages with ```pip```:
 
