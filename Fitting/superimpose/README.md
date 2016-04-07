@@ -76,6 +76,13 @@ python superimpose.py -r data_2/Si_4m6A_abs_1.txt -i 'data_2/Si_4m6A_abs_*' --qm
 
 # Forces b to be 0.1
 ./superimpose.py  -r data_1/Si_8m12A_abs_1.txt -i 'data_1/Si_8m12A_abs_*txt' --qmin 0.01 --qmax 0.04 -b 0.1
+
+# Forces b to be a list 0.02 0.02 0.03 0.03 0.05 0.05
+./superimpose.py  -r data_1/Si_8m12A_abs_1.txt -i 'data_1/Si_8m12A_abs_*txt' --qmin 0.01 --qmax 0.04 --b-list 0.02 0.02 0.03 0.03 0.05 0.05
+
+# Forces k to be a list 
+./superimpose.py  -r data_1/Si_8m12A_abs_1.txt -i 'data_1/Si_8m12A_abs_*txt' --qmin 0.01 --qmax 0.04 --k-list 1.0 1.2 1.3 1.5 1.7 2
+
 ```
 
 ## Instalation

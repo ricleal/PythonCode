@@ -26,11 +26,11 @@ def get_parse_args():
     
     groupk = parser.add_mutually_exclusive_group()
     groupk.add_argument('-k', help='Default K value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
-    groupk.add_argument('--k-list', nargs='+', help='List of K values. Must be the same lenght has data -1', required=False)
+    groupk.add_argument('--k-list', nargs='+', help='List of K values. Must be the same lenght has data -1', type=float, required=False)
     
     groupb = parser.add_mutually_exclusive_group()
     groupb.add_argument('-b', help='Default b value for I_{scaled}(Q) = K*I(Q)+b.', required=False, type=float)
-    groupb.add_argument('--b-list', nargs='+', help='List of B values. Must be the same lenght has data -1', required=False)
+    groupb.add_argument('--b-list', nargs='+', help='List of B values. Must be the same lenght has data -1',  type=float, required=False)
     
     args = vars(parser.parse_args())
     return args

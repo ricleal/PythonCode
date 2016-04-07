@@ -28,7 +28,12 @@ from pprint import pprint
 from tabulate import tabulate
 from operator import itemgetter
 import os.path
+from itertools import cycle
 
+
+## Some globals
+k = None
+b = None
 
 def residuals(p, x, f_target, f_to_optimise,k=None,b=None):
     """
@@ -151,6 +156,47 @@ def create_interpolate_functions(dfs, x_header='X', y_header='Y'):
     return fs;
 
 
+"""
+b and K can be lists or values those functions took care of that
+"""
+def set_b():
+    '''
+    Reset the b-list iterator
+    '''
+    global b
+    if args['b']:
+        b = args['b']
+    elif args['b_list']:
+        b = cycle(args['b_list'])
+    else:
+        b = None
+
+def get_b():
+    global b
+    if args['b_list']:
+        return b.next()
+    else:
+        return b
+        
+def set_k():
+    '''
+    Reset the k-list iterator
+    '''
+    global k
+    if args['k']:
+        k = args['k']
+    elif args['k_list']:
+        k = cycle(args['k_list'])
+    else:
+        k = None
+
+def get_k():
+    global k
+    if args['k_list']:
+        return k.next()
+    else:
+        return k
+    
             
 def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
     '''
@@ -159,22 +205,26 @@ def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
     '''
     plsqs = []
     covs = []
-    q_min,q_max = find_q_range(dfs) 
+    q_min,q_max = find_q_range(dfs)
+    set_b()
+    set_k()
     for idx,(df,interpolate_function) in enumerate(zip(dfs,interpolate_functions)):
         logger.debug("***** Fitting %s"%df.filename)
         # Find a common q_range for all data sets 
-        q_range = np.linspace(q_min, q_max, len(df.index))        
-        if idx != reference_idx:            
+        q_range = np.linspace(q_min, q_max, len(df.index))
+        if idx != reference_idx:
+            b = get_b()
+            k = get_k()
             plsq, cov, infodict,mesg,ier = optimize.leastsq(residuals,
-                                                            ([1,1] if args['k'] is None and args['b'] is None else [1]), # guess
+                                                            ([1,1] if k is None and b is None else [1]), # guess
                                                             args=(q_range,interpolate_functions[reference_idx],interpolate_function,
-                                                                  args['k'],args['b']),
+                                                                  k,b),
                                                             full_output=True)
             logger.info(mesg)
-            y = peval(q_range,interpolate_function,plsq,k=args['k'],b=args['b'])                        
+            y = peval(q_range,interpolate_function,plsq,k=k,b=b)                        
             df['q_range'] = pd.Series(q_range, index=df.index)
             df['y_range_fit'] = pd.Series(y, index=df.index)
-            y = peval(df['X'],interpolate_function,plsq,k=args['k'],b=args['b'])
+            y = peval(df['X'],interpolate_function,plsq,k=k,b=b)
             df['y_fit'] = pd.Series(y, index=df.index)
             plsqs.append(plsq)
             covs.append(cov)
@@ -190,15 +240,22 @@ def append_fit_to_dfs(dfs, reference_idx, interpolate_functions):
 
 def create_summary_table(plsqs, covs, filenames):
     table = []
+    set_b()
+    set_k()
     for plsq, cov,filename in zip(plsqs, covs,filenames):
-        if plsq is None or cov is None:
+        if plsq is None and cov is None:
             table.append([filename,0,0,0,0])
         else:
-            errors = np.sqrt(np.diag(cov))
-            if args['k'] is not None:
-                table.append([filename,args['k'],0,plsq[0],errors[0]])
-            elif args['b'] is not None:
-                table.append([filename,plsq[0],errors[0],args['b'],0])
+            if cov:
+                errors = np.sqrt(np.diag(cov))
+            else:
+                errors = [None, None]
+            b = get_b()
+            k = get_k()
+            if k is not None:
+                table.append([filename,k,0,plsq[0],errors[0]])
+            elif b is not None:
+                table.append([filename,plsq[0],errors[0],b,0])
             else:
                 table.append([filename,plsq[0],errors[0],plsq[1],errors[1]])
     logger.info( "\n%s" % tabulate(sorted(table, key=itemgetter(0)), headers=["File","K", "Err(K)","b","Err(b)"], floatfmt=".4f") )
