@@ -3,8 +3,9 @@ Python Tests
 
 All sort of experiments with python
 
+Repository where I put all my python tests:
 
-- Repository where I put all my python tests:
+- Args_Kwargs: Test using undefined input parameters
 - Benchmark: Python vs Cython
 - Binning: Dynamic histogram Binning
 - Bokeh: Dropdown box
