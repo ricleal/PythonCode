@@ -1,7 +1,7 @@
 import timing
 
 """
-Inspired from: http://joelgrus.com/2015/07/07/haskell-style-fibonacci-in-python/
+Inspired by: http://joelgrus.com/2015/07/07/haskell-style-fibonacci-in-python/
 
 """
 N = 25
