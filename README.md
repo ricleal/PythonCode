@@ -39,6 +39,7 @@ Repository where I put all my python tests:
 - PyWebServicesTest: Web services
 - Qt/
 - SQLite/
+- SWANS: Read Binary file for SWANS instrument
 - Threading: thread manager
 - Variables: Globals vs locals
 - Volume: Render 3d volumes
