@@ -26,6 +26,7 @@ Repository where I put all my python tests:
 - MongoDB: Python interface with MongoDB
 - MonteCarlo: Pi calculation, Monty Hall problem
 - Mpld3: Plotting tests
+- Multiprocessing: python Multiprocessing calling independent functions.
 - NeXus/
 - OpenCL: Demos, GPU processing Matrix, Small Angle Scattering Cylinder model
 - OpenCV: image processing
