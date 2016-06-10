@@ -3,26 +3,42 @@ import numpy as np
 import pyopencl as cl
 
 """
+
 Sums element wise 2 vector of 3d coordinates
-Using Float3
+Using Float
+
+As others mentioned, float3 (and other type3 types) behave as float4 (and other type4 types) for the purposes of size and alignment. This could also be seen using the built-in vec_step function, which returns the number of elements in the input object's type, but returns 4 for type3 objects.
+
+If your host code generates a packed float3 array - with each object taking the size and alignment of just 3 floats - then the proper way to use it from OpenCL is:
+
+Use a float* parameter instead of float3*
+Load the data using vload3
+Store data using vstore3
+
+Vector 3 is slow!!!!
+http://stackoverflow.com/questions/20200203/using-own-vector-type-in-opencl-seems-to-be-faster
+
 """
 
 source = """
 __kernel void gpu_mul(__global const float *a, __global const float *b, __global float *c) {
 
-    int i = get_global_id(0);
+    int i = get_global_id(0); //iterates the vector
     int j = get_global_id(1);
+    int k = get_global_id(2);
 
-    int size_a = get_global_size(0);
-    int size_b = get_global_size(1);
+    int size_vector = get_global_size(0);
+    int size_a = get_global_size(1);
+    int size_b = get_global_size(2);
 
-    float3 vec_a = vload3(i, a);
-    float3 vec_b = vload3(j, b);
 
-    int idx = i*size_b + j;
+    int c_idx = i + j * size_vector + k * size_vector * size_a;
+    int a_idx =  i + j*size_vector;
+    int b_idx =  i + k*size_vector;
 
-    float3 res = vec_a + vec_b;
-    vstore3(res, idx, c);
+    // sum element by element
+    c[c_idx] = a[a_idx] + b[b_idx];
+
 
 } // execute over n "work items"
 """
@@ -46,7 +62,7 @@ c_buf = cl.Buffer(ctx, cl.mem_flags.WRITE_ONLY, c_np.nbytes)
 prg = cl.Program(ctx, source).build()
 
 # Kernel is now launched
-launch = prg.gpu_mul(queue, (SIZE,SIZE), None, a_buf, b_buf, c_buf)
+launch = prg.gpu_mul(queue, (3,SIZE,SIZE), None, a_buf, b_buf, c_buf)
 # wait till the process completes
 launch.wait()
 
