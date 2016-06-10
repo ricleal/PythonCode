@@ -15,9 +15,6 @@ __kernel void gpu_mul(__global const float *a, __global const float *b, __global
     int size_b = get_global_size(1);
 
     int idx = i*size_b + j;
-    //c[idx].x = b[i].x;
-    //c[idx].y = b[i].y;
-    //c[idx].z = b[i].z;
     c[idx] = a[i] + b[j];
 
 } // execute over n "work items"
