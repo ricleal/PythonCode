@@ -44,7 +44,7 @@ def radial_average(data_x, data_y, data_z):
         weights=data_z[q_condition])
     angle_and_intensity_counts = np.bincount(angle[q_condition])
 
-    angle_and_intensity_average = angle_and_intensity_sum / angle_and_intensity_counts
+    angle_and_intensity_average = angle_and_intensity_sum / angle_and_intensity_counts.astype(np.float64)
     angle_and_intensity_average = np.nan_to_num(angle_and_intensity_average) # because division by 0
     angle_and_intensity_average = np.tile(angle_and_intensity_average, 2) # duplicates array
 
@@ -68,13 +68,24 @@ def do_the_job(file_name):
     # normalize to 1
     angle_and_intensity_average = (angle_and_intensity_average - angle_and_intensity_average.min()) / (angle_and_intensity_average.max() - angle_and_intensity_average.min())
 
+    angle_and_intensity_average[angle_and_intensity_average<0.2] = np.nan
+
     x = np.arange(450)
 
     ax2 = fig.add_subplot(122)
     ax2.plot(x,angle_and_intensity_average,'b.')
 
     # interpolate 0s
-    tck = interpolate.splrep(x, angle_and_intensity_average,s=0.1)
+    print angle_and_intensity_average.shape
+    y = angle_and_intensity_average
+    nans, xx = np.isnan(y), lambda z: z.nonzero()[0]
+    y[nans]= np.interp(xx(nans), xx(~nans), y[~nans])
+    angle_and_intensity_average = y
+    print angle_and_intensity_average.shape
+    print x.shape
+
+    tck = interpolate.splrep(x, angle_and_intensity_average,s=0.8)
+
     x_new = np.linspace(0,449,500)
     angle_and_intensity_average_interp = interpolate.splev(x_new, tck, der=0)
 
