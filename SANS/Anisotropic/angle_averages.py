@@ -9,6 +9,8 @@ from matplotlib.colors import LogNorm
 from scipy.optimize import leastsq
 from scipy import signal
 from scipy import interpolate
+from scipy import stats
+
 
 '''
 find . -iname "*.dat" -exec  python angle_averages.py {} \;
@@ -68,31 +70,20 @@ def do_the_job(file_name):
     # normalize to 1
     angle_and_intensity_average = (angle_and_intensity_average - angle_and_intensity_average.min()) / (angle_and_intensity_average.max() - angle_and_intensity_average.min())
 
-    angle_and_intensity_average[angle_and_intensity_average<0.2] = np.nan
-
     x = np.arange(450)
 
     ax2 = fig.add_subplot(122)
     ax2.plot(x,angle_and_intensity_average,'b.')
 
-    # interpolate 0s
-    print angle_and_intensity_average.shape
-    y = angle_and_intensity_average
-    nans, xx = np.isnan(y), lambda z: z.nonzero()[0]
-    y[nans]= np.interp(xx(nans), xx(~nans), y[~nans])
-    angle_and_intensity_average = y
-    print angle_and_intensity_average.shape
-    print x.shape
+    # histogram
+    # the histogram of the data
+    # Integration
+    n_bins = 50
+    bin_means, bin_edges, binnumber = stats.binned_statistic(x, angle_and_intensity_average, statistic='sum', bins=n_bins)
+    bin_width = (bin_edges[1] - bin_edges[0])
+    bin_centers = bin_edges[1:] - bin_width/2
 
-    tck = interpolate.splrep(x, angle_and_intensity_average,s=0.8)
-
-    x_new = np.linspace(0,449,500)
-    angle_and_intensity_average_interp = interpolate.splev(x_new, tck, der=0)
-
-    ax2.plot(x_new,angle_and_intensity_average_interp,'r-')
-    # peakind = signal.find_peaks_cwt(angle_and_intensity_average_interp, widths = np.arange(50))
-    # print peakind, xs[peakind], data[peakind]
-
+    ax2.plot(bin_centers,bin_means,'r')
     plt.show()
 
 def main():
