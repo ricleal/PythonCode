@@ -50,21 +50,6 @@ def radial_average(data_x, data_y, data_z):
 
     return angle_and_intensity_average[:450]
 
-
-def filter_noise(x,y):
-    import scipy.fftpack
-
-    w = scipy.fftpack.rfft(y)
-    f = scipy.fftpack.rfftfreq(len(x), x[1]-x[0])
-    spectrum = w**2
-
-    cutoff_idx = spectrum < (spectrum.max()/100)
-    w2 = w.copy()
-    w2[cutoff_idx] = 0
-
-    y2 = scipy.fftpack.irfft(w2)
-    return y2
-
 def do_the_job(file_name):
     data_x, data_y, data_z = get_data(file_name)
     shape_x = len(np.unique(data_x))
@@ -88,14 +73,12 @@ def do_the_job(file_name):
     ax2 = fig.add_subplot(122)
     ax2.plot(x,angle_and_intensity_average,'b.')
 
-    # # interpolate 0s
-    # tck = interpolate.splrep(x, angle_and_intensity_average,s=0.1)
-    # x_new = np.linspace(0,449,500)
-    # angle_and_intensity_average_interp = interpolate.splev(x_new, tck, der=0)
+    # interpolate 0s
+    tck = interpolate.splrep(x, angle_and_intensity_average,s=0.1)
+    x_new = np.linspace(0,449,500)
+    angle_and_intensity_average_interp = interpolate.splev(x_new, tck, der=0)
 
-    angle_and_intensity_average_filtered = filter_noise(x,angle_and_intensity_average)
-
-    ax2.plot(x,angle_and_intensity_average_filtered,'r-')
+    ax2.plot(x_new,angle_and_intensity_average_interp,'r-')
     # peakind = signal.find_peaks_cwt(angle_and_intensity_average_interp, widths = np.arange(50))
     # print peakind, xs[peakind], data[peakind]
 
