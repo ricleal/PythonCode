@@ -7,6 +7,8 @@ from pylab import figure, cm
 import sys
 from matplotlib.colors import LogNorm
 from scipy.optimize import leastsq
+from scipy import signal
+from scipy import interpolate
 
 '''
 find . -iname "*.dat" -exec  python angle_averages.py {} \;
@@ -43,30 +45,25 @@ def radial_average(data_x, data_y, data_z):
     angle_and_intensity_counts = np.bincount(angle[q_condition])
 
     angle_and_intensity_average = angle_and_intensity_sum / angle_and_intensity_counts
+    angle_and_intensity_average = np.nan_to_num(angle_and_intensity_average) # because division by 0
     angle_and_intensity_average = np.tile(angle_and_intensity_average, 2) # duplicates array
 
     return angle_and_intensity_average[:450]
 
 
+def filter_noise(x,y):
+    import scipy.fftpack
 
-######################################
-# Setting up test data
-def norm(x, mean, sd, b):
-  norm = []
-  for i in range(x.size):
-    norm += [ (1.0/(sd*np.sqrt(2*np.pi))*np.exp(-(x[i] - mean)**2/(2*sd**2))) + b]
-  return np.array(norm)
+    w = scipy.fftpack.rfft(y)
+    f = scipy.fftpack.rfftfreq(len(x), x[1]-x[0])
+    spectrum = w**2
 
-######################################
+    cutoff_idx = spectrum < (spectrum.max()/100)
+    w2 = w.copy()
+    w2[cutoff_idx] = 0
 
-def res(p, y, x):
-  m, dm, sd1, sd2,b = p
-  m1 = m
-  m2 = m1 + dm
-  y_fit = norm(x, m1, sd1, b) + norm(x, m2, sd2, b)
-  err = y - y_fit
-  return err
-
+    y2 = scipy.fftpack.irfft(w2)
+    return y2
 
 def do_the_job(file_name):
     data_x, data_y, data_z = get_data(file_name)
@@ -82,16 +79,25 @@ def do_the_job(file_name):
     #ax1.pcolor(X, Y, Z, norm=LogNorm())
 
     angle_and_intensity_average = radial_average(data_x, data_y, data_z)
+
+    # normalize to 1
+    angle_and_intensity_average = (angle_and_intensity_average - angle_and_intensity_average.min()) / (angle_and_intensity_average.max() - angle_and_intensity_average.min())
+
     x = np.arange(450)
-    # Solving
-    m, dm, sd1, sd2, b = [180, 260, 1, 1, 0.1]
-    p = [m, dm, sd1, sd2, b] # Initial guesses for leastsq
-    plsq = leastsq(res, p, args = (angle_and_intensity_average, x))
-    y_est = norm(x, plsq[0][0], plsq[0][2], plsq[0][4]) + norm(x, plsq[0][0] + plsq[0][1], plsq[0][3], plsq[0][4])
 
     ax2 = fig.add_subplot(122)
-    ax2.plot(x,angle_and_intensity_average)
-    ax2.plot(x, y_est, 'g.')
+    ax2.plot(x,angle_and_intensity_average,'b.')
+
+    # # interpolate 0s
+    # tck = interpolate.splrep(x, angle_and_intensity_average,s=0.1)
+    # x_new = np.linspace(0,449,500)
+    # angle_and_intensity_average_interp = interpolate.splev(x_new, tck, der=0)
+
+    angle_and_intensity_average_filtered = filter_noise(x,angle_and_intensity_average)
+
+    ax2.plot(x,angle_and_intensity_average_filtered,'r-')
+    # peakind = signal.find_peaks_cwt(angle_and_intensity_average_interp, widths = np.arange(50))
+    # print peakind, xs[peakind], data[peakind]
 
     plt.show()
 
