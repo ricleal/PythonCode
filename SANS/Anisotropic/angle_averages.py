@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.ndimage
@@ -10,7 +12,7 @@ from scipy.optimize import leastsq
 from scipy import signal
 from scipy import interpolate
 from scipy import stats
-
+from scipy.interpolate import UnivariateSpline
 
 '''
 find . -iname "*.dat" -exec  python angle_averages.py {} \;
@@ -73,7 +75,7 @@ def do_the_job(file_name):
     x = np.arange(450)
 
     ax2 = fig.add_subplot(122)
-    ax2.plot(x,angle_and_intensity_average,'b.')
+    ax2.plot(x,angle_and_intensity_average,'b.',label="raw")
 
     # histogram
     # the histogram of the data
@@ -82,8 +84,17 @@ def do_the_job(file_name):
     bin_means, bin_edges, binnumber = stats.binned_statistic(x, angle_and_intensity_average, statistic='sum', bins=n_bins)
     bin_width = (bin_edges[1] - bin_edges[0])
     bin_centers = bin_edges[1:] - bin_width/2
+    # normalize to 1
+    bin_means = (bin_means - bin_means.min()) / (bin_means.max() - bin_means.min())
+    ax2.plot(bin_centers,bin_means,'r', label="binning")
 
-    ax2.plot(bin_centers,bin_means,'r')
+    # Spline interpolation
+    spl = UnivariateSpline(bin_centers, bin_means)
+    spl.set_smoothing_factor(0.5)
+    xs = np.linspace(bin_centers.min(), bin_centers.max(), 1000)
+    ax2.plot(xs, spl(xs), 'g',label="spline")
+    ax2.legend()
+
     plt.show()
 
 def main():
