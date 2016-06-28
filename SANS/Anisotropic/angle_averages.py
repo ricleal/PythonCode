@@ -13,6 +13,7 @@ from scipy import signal
 from scipy import interpolate
 from scipy import stats
 from scipy.interpolate import UnivariateSpline
+from scipy.optimize import curve_fit
 
 '''
 find . -iname "*.dat" -exec  python angle_averages.py {} \;
@@ -54,6 +55,19 @@ def radial_average(data_x, data_y, data_z):
 
     return angle_and_intensity_average[:450]
 
+def multiple_gaussian(x, *params):
+    '''
+    Fitting function for multiple gaussians
+    params = [center, amplitude, width, ... repeat... ]
+    '''
+    y = np.zeros_like(x)
+    for i in range(0, len(params), 3):
+        ctr = params[i]
+        amp = params[i+1]
+        wid = params[i+2]
+        y = y + amp * np.exp( -((x - ctr)/wid)**2)
+    return y
+
 def do_the_job(file_name):
     data_x, data_y, data_z = get_data(file_name)
     shape_x = len(np.unique(data_x))
@@ -77,7 +91,7 @@ def do_the_job(file_name):
     ax2 = fig.add_subplot(122)
     ax2.plot(x,angle_and_intensity_average,'b.',label="raw")
 
-    # histogram
+    # histogram / rebinning
     # the histogram of the data
     # Integration
     n_bins = 50
@@ -86,15 +100,24 @@ def do_the_job(file_name):
     bin_centers = bin_edges[1:] - bin_width/2
     # normalize to 1
     bin_means = (bin_means - bin_means.min()) / (bin_means.max() - bin_means.min())
-    ax2.plot(bin_centers,bin_means,'r', label="binning")
+    ax2.plot(bin_centers,bin_means,'r--', label="binning")
 
     # Spline interpolation
     spl = UnivariateSpline(bin_centers, bin_means)
     spl.set_smoothing_factor(0.5)
     xs = np.linspace(bin_centers.min(), bin_centers.max(), 1000)
     ax2.plot(xs, spl(xs), 'g',label="spline")
-    ax2.legend()
 
+    ## Fit 2 gaussians: [center, amplitude, width]
+    guess = [180, 1, 30, 360, 1, 30]
+    popt, pcov = curve_fit(multiple_gaussian, xs, spl(xs), p0=guess)
+    print 80*"-"
+    print "Gaussian1 center = %.2f, amplitude = %.2f, std = %.2f, FWHM = %.2f"%(popt[0],popt[1],popt[2], 2 * np.sqrt(2*np.log(2))*popt[2])
+    print "Gaussian2 center = %.2f, amplitude = %.2f, std = %.2f, FWHM = %.2f"%(popt[3],popt[4],popt[5], 2 * np.sqrt(2*np.log(2))*popt[5])
+    fit = multiple_gaussian(xs, *popt)
+    ax2.plot(xs, fit , 'y', label="gaussian")
+
+    ax2.legend()
     plt.show()
 
 def main():
