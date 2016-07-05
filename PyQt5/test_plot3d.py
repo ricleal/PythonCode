@@ -5,14 +5,16 @@
 Plotly 3D not working
 Besause WebGL not available
 https://trac.webkit.org/wiki/QtWebKitWebGL
+It works on Mac though
 """
 
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QGraphicsScene
-from PyQt5.QtWebKitWidgets import QWebView
-from PyQt5.QtWebKit import QWebSettings
-from PyQt5.QtWebKitWidgets import QGraphicsWebView
-from PyQt5 import QtWebKitWidgets
+#from PyQt5.QtWebKitWidgets import QWebView
+from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
+#from PyQt5.QtWebEngineCore import QWebSettings
+#from PyQt5.QtWebEngineWidgets import QGraphicsWebView
+#from PyQt5 import QtWebKitWidgets
 from PyQt5.QtCore import QUrl
 from PyQt5.QtOpenGL import QGLWidget
 import plots
@@ -36,8 +38,8 @@ if __name__ == '__main__':
     w.resize(800, 600)
     w.setWindowTitle('Simple Plot')
 
-    QWebSettings.globalSettings().setAttribute(QWebSettings.AcceleratedCompositingEnabled, True)
-    QWebSettings.globalSettings().setAttribute(QWebSettings.WebGLEnabled, True)
+    # QWebSettings.globalSettings().setAttribute(QWebSettings.AcceleratedCompositingEnabled, True)
+    # QWebSettings.globalSettings().setAttribute(QWebSettings.WebGLEnabled, True)
 
     plot_content = plots.plot3d()
     w.setHtml(html%{'plot_content':plot_content})

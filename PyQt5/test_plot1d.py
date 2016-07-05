@@ -14,7 +14,8 @@ last edited: January 2015
 
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtWebKitWidgets import QWebView
+#from PyQt5.QtWebKitWidgets import QWebView
+from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
 from PyQt5.QtCore import QUrl
 import plots
 
