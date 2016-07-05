@@ -3,6 +3,8 @@
 
 """
 Plotly 3D not working
+Besause WebGL not available
+https://trac.webkit.org/wiki/QtWebKitWebGL
 """
 
 import sys
@@ -35,6 +37,7 @@ if __name__ == '__main__':
     w.setWindowTitle('Simple Plot')
 
     QWebSettings.globalSettings().setAttribute(QWebSettings.AcceleratedCompositingEnabled, True)
+    QWebSettings.globalSettings().setAttribute(QWebSettings.WebGLEnabled, True)
 
     plot_content = plots.plot3d()
     w.setHtml(html%{'plot_content':plot_content})
