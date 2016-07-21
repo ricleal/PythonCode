@@ -8,7 +8,8 @@ QWebView with URL
 
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtWebKitWidgets import QWebView
+#from PyQt5.QtWebKitWidgets import QWebView
+from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
 from PyQt5.QtCore import QUrl
 
 if __name__ == '__main__':

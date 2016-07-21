@@ -2,19 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-ZetCode PyQt5 tutorial
-
-In this example, we create a simple
-window in PyQt5.
-
-author: Jan Bodnar
-website: zetcode.com
-last edited: January 2015
+Plot 1D
 """
 
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget
-from PyQt5.QtWebKitWidgets import QWebView
+#from PyQt5.QtWebKitWidgets import QWebView
+from PyQt5.QtWebEngineWidgets import QWebEngineView as QWebView
 from PyQt5.QtCore import QUrl
 import plots
 
