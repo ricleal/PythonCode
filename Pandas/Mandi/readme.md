@@ -2,9 +2,13 @@
 
 2 621 440 detectors
 
-Dump x,y,z of every detector into a pandas dataframe.
+###`mandi_dump.py`:
 
-Read id back, append spherical coordinates (r,t,p) and save it as other dataframe.
+Dump `(x,y,z)` of every detector into a pandas dataframe.
+
+###`mandi_read.py`:
+
+Read it back, append spherical coordinates `(r,t,p)` and save it as other dataframe.
 
 Results:
 
