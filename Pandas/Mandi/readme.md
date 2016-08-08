@@ -13,16 +13,10 @@ Read it back, append spherical coordinates `(r,t,p)` and save it as other datafr
 Results:
 
 ```
-$ python mandi_read.py 
-'spherical' ((array([[ 0.07128832, -0.40785943,  0.09191706],
-       [ 0.07129393, -0.40760608,  0.09248071],
-       [ 0.07129954, -0.40735272,  0.09304436],
-       ..., 
-       [-0.1877869 ,  0.33930886,  0.26351482],
-       [-0.18729538,  0.33966949,  0.26358796],
-       [-0.18680386,  0.34003012,  0.26366111]]),), {}) 0.30 sec
-New data frame headers: ['name' 'x' 'y' 'z' 'r' 't' 'p']
-DF Saved!
+$ python2 mandi_read.py
+Data frame headers:['name' 'bank_name' 'i' 'j' 'x' 'y' 'z']
+Cartesian to Sperical took 0.819 seconds
+NEW Data frame headers:['name' 'bank_name' 'i' 'j' 'x' 'y' 'z' 'r' 't' 'p']
+XYZ for Pixel: xyz_2d[128,128] = [-0.00747811 -0.37506834  0.16469329]
+Reshape and Indexing took 0.103 seconds
 ```
-
-0.3 seconds :)
