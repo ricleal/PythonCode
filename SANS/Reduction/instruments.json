@@ -1,0 +1,16 @@
+{
+	"BioSANS": 
+	{
+		"metadata": 
+		{
+			
+			"pixel_size_x": "/SPICErack/Header/x_mm_per_pixel/#text",
+			"pixel_size_y": "/SPICErack/Header/y_mm_per_pixel/#text",
+			"translation": "/SPICErack/Motor_Positions/detector_trans/#text",
+			"detector_wing": "/SPICErack/Data/DetectorWing/data",
+			"rotation": "/SPICErack/Motor_Positions/det_west_wing_rot/#text",
+			"radius": "/SPICErack/Header/west_wing_det_radius_m/#text"
+		},
+		"detectors" 
+	}
+}
