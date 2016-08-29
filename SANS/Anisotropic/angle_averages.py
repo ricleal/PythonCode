@@ -89,7 +89,7 @@ def do_the_job(file_name):
     x = np.arange(450)
 
     ax2 = fig.add_subplot(122)
-    ax2.plot(x,angle_and_intensity_average,'b.',label="raw")
+    #ax2.plot(x,angle_and_intensity_average,'b.',label="raw")
 
     # histogram / rebinning
     # the histogram of the data
@@ -106,7 +106,7 @@ def do_the_job(file_name):
     spl = UnivariateSpline(bin_centers, bin_means)
     spl.set_smoothing_factor(0.5)
     xs = np.linspace(bin_centers.min(), bin_centers.max(), 1000)
-    ax2.plot(xs, spl(xs), 'g',label="spline")
+    #ax2.plot(xs, spl(xs), 'g',label="spline")
 
     ## Fit 2 gaussians: [center, amplitude, width]
     guess = [180, 1, 30, 360, 1, 30]
