@@ -44,3 +44,5 @@ lamp.cds
 *.tgz
 *_scaled.csv
 
+env
+
