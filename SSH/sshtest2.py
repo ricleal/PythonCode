@@ -20,7 +20,7 @@ def start():
 
 while start():
     key = True
-    cmd = input("********** Command to run: ****************")
+    cmd = input("Command to run: > ")
     if cmd == "":
         break
     chan = client.get_transport().open_session()

@@ -19,10 +19,10 @@ public_key_filename=os.path.expanduser('~/.ssh/id_rsa.pub')
 
 
 def start(server, username, password=None,  key_filename=None):
-	'''
-	starts the client
-	If password=None uses the key_filename
-	'''
+    '''
+    starts the client
+    If password=None uses the key_filename
+    '''
     try :
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -80,6 +80,6 @@ while client:
         if chan.exit_status_ready():
             print("** exit status: %s" % chan.recv_exit_status())
             key = False
-            client.close()
+            #client.close()
 client.close()
 
