@@ -7,11 +7,11 @@ from pprint import pprint
 """
 Only works on the intranet
 
-Get's all IPTS numbers and users assigned
+Gets all IPTS numbers and users assigned
 """
 
 
-url='ldaps://data.sns.gov/'
+url='ldaps://ldap-vip.sns.gov/'
 all_groups = "ou=Groups,dc=sns,dc=ornl,dc=gov"
 
 # print "Username?"
@@ -27,13 +27,14 @@ try:
     ldapmodule_trace_level = 0 //2
     ldapmodule_trace_file = sys.stderr
 
+    print "Initializing LDAP...."
     l = ldap.initialize(url,
                         trace_level=ldapmodule_trace_level,
                         trace_file=ldapmodule_trace_file)
 
-
+    print "Initializing LDAP.... Done!"
     results = l.search(all_groups, ldap.SCOPE_SUBTREE, "(&(cn=IPTS*)(description=proposal)(memberUid=*))", ["cn","memberUid"])
-
+    print "Results Done!"
     while 1:
         result_type, result_data = l.result(results, 0)
         if (result_data == []):

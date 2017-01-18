@@ -10,7 +10,7 @@ Only works on the intranet
 """
 
 
-url='ldaps://data.sns.gov/'
+url='ldaps://ldap-vip.sns.gov/'
 username='uid=%s,ou=Users,dc=sns,dc=ornl,dc=gov'
 #cert = '/etc/ssl/certs/ca-certificates.crt'
 
