@@ -3,12 +3,17 @@ from __future__ import absolute_import, print_function
 '''
 
 Run as:
-"celery worker -A celery_config -l info -c 5"
+celery worker -A notify_task -l debug
+
+Then
+python3 notify_task
 
 '''
 import pyinotify
 
-from celery_config import app
+from celery import Celery
+
+app = Celery('celery_blog', broker='redis://localhost:6379/0')
 
 SCAN_LOCATIONS = ["/tmp", "/var"]
 
