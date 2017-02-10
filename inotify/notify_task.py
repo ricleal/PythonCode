@@ -19,41 +19,18 @@ from celery import Celery
 
 app = Celery('notify_task', broker='redis://localhost:6379/0')
 
-SCAN_LOCATIONS = ["/home/rhf"]
+SCAN_LOCATIONS = ["/tmp"]
 
 class EventHandler(pyinotify.ProcessEvent):
 
-    def bytes_to_english(self, no_of_bytes):
-        #Helper function to convert number of bytes receives from os.stat into human radabale form
-        # 1024 per 'level'
-        suffixes = ['bytes', 'kb', 'Mb', 'Gb', 'Tb', 'Pb', 'Eb', 'Yb']
-        f_no = float(no_of_bytes)
-        level = 0
-        while(f_no > 1024.0):
-            f_no = f_no / 1024.0
-            level = level + 1
-        if level == 0:
-            return "%s %s" % (no_of_bytes, suffixes[level])
-        return "%5.1f %s" % (f_no, suffixes[level])
-
-    def get_stats(self, pathname, name):
-        #Helper function to form the data dictionary for passing onto the database helper.
-        stats = os.stat(pathname)
-        return stats
-
     def process_IN_CREATE(self, event):
-        #Called everytime a file / dir is created
-        filestats = self.get_stats(event.pathname, event.name)
-        print(filestats)
+        print("CREATE", event.pathname, event.name)
  
     def process_IN_DELETE(self, event):
-        #Called everytime a file / dir is deleted
-        print(event.pathname)
+        print("DELETE", event.pathname, event.name)
 
     def process_IN_MODIFY(self, event):
-        #Called everytime a file / dir is modified
-        filestats = self.get_stats(event.pathname, event.name)
-        print(filestats)
+        print("MODIFY", event.pathname, event.name)
 
 @app.task
 def monitor_folders():
