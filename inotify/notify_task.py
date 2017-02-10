@@ -9,13 +9,17 @@ Then
 python3 notify_task
 
 '''
+
+import os
 import pyinotify
+import time
+from os import stat
 
 from celery import Celery
 
-app = Celery('celery_blog', broker='redis://localhost:6379/0')
+app = Celery('notify_task', broker='redis://localhost:6379/0')
 
-SCAN_LOCATIONS = ["/tmp", "/var"]
+SCAN_LOCATIONS = ["/home/rhf"]
 
 class EventHandler(pyinotify.ProcessEvent):
 
@@ -35,19 +39,7 @@ class EventHandler(pyinotify.ProcessEvent):
     def get_stats(self, pathname, name):
         #Helper function to form the data dictionary for passing onto the database helper.
         stats = os.stat(pathname)
-        filestats = {'path':pathname, 'name':name}
-        filestats['ATime'] = time.strftime("%d-%m-%Y %H:%M:%S",time.localtime(stats[stat.ST_ATIME]))
-        filestats['CTime'] = time.strftime("%d-%m-%Y %H:%M:%S",time.localtime(stats[stat.ST_CTIME]))
-        filestats['MTime'] = time.strftime("%d-%m-%Y %H:%M:%S",time.localtime(stats[stat.ST_MTIME]))
-        filestats['size'] = stats[stat.ST_SIZE]
-        filestats['size_human'] = self.bytes_to_english(stats[stat.ST_SIZE])
-        if stat.S_ISDIR(stats[stat.ST_MODE]):
-            filestats['type'] = 'Directory'
-        elif stat.S_ISLNK(stats[stat.ST_MODE]):
-            filestats['type'] = 'Symbolic link'
-        else:
-            filestats['type'] = 'File'
-        return filestats
+        return stats
 
     def process_IN_CREATE(self, event):
         #Called everytime a file / dir is created
