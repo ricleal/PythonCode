@@ -1,6 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, print_function
+'''
 
+Run as:
+"celery worker -A celery_config -l info -c 5"
+
+'''
 import pyinotify
 
 from celery_config import app
@@ -64,3 +69,5 @@ def monitor_folders():
         wdd = wm.add_watch(location, mask, rec=True)
     notifier.loop()
 
+if __name__ == "__main__":
+    monitor_folders.delay()
