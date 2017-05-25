@@ -1,9 +1,10 @@
-import multiprocessing
-import ctypes
-import numpy as np
 import os
 import time
 import random
+import multiprocessing
+import ctypes
+import numpy as np
+
 
 '''
 Shared array!
