@@ -11,5 +11,5 @@ $ \ln(I(q)) = \ln(I_0) - (R_g^2/3)q^{2} $
 
 ## Fitted
 
-![](fitted_data.png)
+![](guinier_plot.png)
 
