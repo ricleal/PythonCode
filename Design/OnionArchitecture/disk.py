@@ -9,6 +9,8 @@ class Disk(Device):
 
     def read(self):
         print('Reading from the Disk...')
+        super().read()
 
     def write(self, value):
         print('Writing to the Disk:', value)
+        super().write(value)
