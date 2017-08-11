@@ -4,9 +4,17 @@
 
 Sqlite with multiple processes
 
-Same as example 1 but with a queue
+Same as example 2 but:
 
-The main difference is that we can see the results as they are being processed
+1. locks the db to see if the object it's there
+2. frees the db
+3. if it is returns it
+4. if it is not:
+    long operation to get it
+    locks the db
+    checks again if it is there:
+    if it's not, inserts it
+    frees the db
 
 '''
 
@@ -62,16 +70,17 @@ def fetch_or_insert(conn, key, queue, lock):
     '''
     lock.acquire()
     result = fetch_from_db(conn, key)
+    lock.release()
     if result is not None:
-        lock.release()
         logger.debug("Exists in the DB: %s", result)
     else:
         # Sleep simulates a slow operation to get the data from somewhere else
         time.sleep(random.random())
         value = random_str_generator()
-
         logger.debug("Inserting in the DB: Key = %s :: Value = %s", key, value)
-        insert_into_db(conn, key, value)
+        lock.acquire()
+        if not fetch_from_db(conn, key):
+            insert_into_db(conn, key, value)
         lock.release()
         result = (key, value)
     queue.put(result)

@@ -4,6 +4,13 @@
 
 Sqlite with multiple processes
 
+Check if something is in the DB
+if it it is, returns it
+if it is not, get it from somewhere (long operation) 
+   and inserts in the db and returns it
+The db is locked during all that
+Shows the results at the same time
+
 '''
 
 from __future__ import print_function, with_statement
