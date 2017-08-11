@@ -7,10 +7,10 @@ import datetime
 
 
 def plot1d():
-    x_data = np.arange(0, 120,0.1)
+    x_data = np.arange(0, 100,0.001)
     trace1 = go.Scatter(
         x=x_data,
-        y=np.sin(x_data)
+        y=np.sqrt(x_data)
     )
 
     data = [trace1]
