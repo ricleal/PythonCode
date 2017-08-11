@@ -4,6 +4,10 @@
 
 Sqlite with multiple processes
 
+Same as example 1 but with a queue
+
+The main difference is that we can see the results as they are being processed
+
 '''
 
 from __future__ import print_function, with_statement
@@ -16,7 +20,7 @@ import string
 import logging
 from hashlib import sha1
 from pprint import pprint
-from multiprocessing import Process, Manager, Lock
+from multiprocessing import Process, Queue, Lock
 
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -49,7 +53,7 @@ def fetch_from_db(conn, key):
         logger.error("--------- fetch_from_db")
         #logger.exception(e)
 
-def fetch_or_insert(conn, key, shared_results, lock):
+def fetch_or_insert(conn, key, queue, lock):
     '''
     The database remains loked if the object
     needs to be fetch from somewhere else
@@ -70,7 +74,20 @@ def fetch_or_insert(conn, key, shared_results, lock):
         insert_into_db(conn, key, value)
         lock.release()
         result = (key, value)
-    shared_results.append(result)
+    queue.put(result)
+
+def show_queue_contents(queue):
+    '''
+    This can be seen as a consumer
+    '''
+    while True:
+        value  = queue.get()
+        if value is None:
+            # Poison pill means shutdown
+            queue.close()
+            break
+        logger.info("fetch_or_insert returned: %s", value)
+
 
 def random_str_generator(size=6, chars=string.ascii_letters + string.digits):
     random.seed()
@@ -91,19 +108,24 @@ if __name__ == '__main__':
         #logger.exception(e)
 
 
-    with Manager() as manager:
-        jobs = []
-        shared_results = manager.list()
-        for _ in range(N):
-            key = random.randint(1,10)
-            p = Process(target=fetch_or_insert, args=(conn, key, shared_results, lock, ))
-            jobs.append(p)
-            p.start()
+    queue = Queue()
 
-        for p in jobs:
-            p.join()
+    jobs = []
+    for _ in range(N):
+        key = random.randint(1,10)
+        p = Process(target=fetch_or_insert, args=(conn, key, queue, lock, ))
+        jobs.append(p)
+        p.start()
 
-        logger.info("fetch_or_insert returned: %s", shared_results[:])
+    qp = Process(target=show_queue_contents, args=(queue, ))
+    qp.start()
+
+    for p in jobs:
+        p.join()
+
+    queue.put(None)
+    qp.join()
+
 
     # DB cleanup
     with conn:
@@ -112,3 +134,5 @@ if __name__ == '__main__':
         cursor.execute("drop table pairs")
         cursor.close()
     conn.close()
+
+    logger.info("Done!")
