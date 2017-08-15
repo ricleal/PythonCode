@@ -102,3 +102,11 @@ ENV/
 *.db
 .DS_Store
 .vscode/
+.project
+.pydevproject
+.settings/
+
+*.tgz
+*.*~
+*.o
+
