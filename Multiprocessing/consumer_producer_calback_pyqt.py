@@ -67,6 +67,14 @@ class Display(object):
 
 # Display().display_tasks(5)
 
+class QTableWidgetManager(BaseManager):  
+    pass 
+
+QTableWidgetManager.register('QTableWidget', QTableWidget, exposed=['__init__'])  
+myQTableWidgetManager = QTableWidgetManager()  
+myQTableWidgetManager.start() 
+
+
 class App(QWidget):
  
     def __init__(self):
@@ -76,7 +84,7 @@ class App(QWidget):
         self.top = 0
         self.width = 600
         self.height = 400
-        self.tableWidget = QTableWidget()
+        self.tableWidget = myQTableWidgetManager.QTableWidget()
         self.initUI()
  
     def initUI(self):
@@ -126,10 +134,6 @@ class App(QWidget):
             for col in range(n_cols):
                 self.tableWidget.setItem(row,col, QTableWidgetItem("task row={} col={}".format(row,col)))
 
-class AppManager(BaseManager):  
-    pass 
-
-AppManager.register('App', App, exposed = ['tableWidget'])  
 
         
 if __name__ == '__main__':
