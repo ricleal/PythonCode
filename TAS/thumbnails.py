@@ -52,13 +52,14 @@ def plot(col_x, col_y, headers, data):
     plt.figure()
     plt.plot(data_array[col_x], data_array[col_y])
     # Hide axis values
-    # plt.xticks([])
-    # plt.yticks([])
+    plt.xticks([])
+    plt.yticks([])
 
     figfile = BytesIO()
     plt.savefig(figfile, format='svg')
     figfile.seek(0)
     figdata_svg = base64.b64encode(figfile.getvalue())
+    plt.close()
     return figdata_svg
 
 
