@@ -1,4 +1,4 @@
-from pprint import pprint
+from __future__ import print_function
 
 import base64
 import re
@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pylab import rcParams
 
-rcParams['figure.figsize'] = 10, 10
+# icon size
+rcParams['figure.figsize'] = 1, 1
+
 
 def parse(filename):
     '''
@@ -55,11 +57,12 @@ def plot(col_x, col_y, headers, data):
     plt.savefig(figfile, format='svg')
     figfile.seek(0)
     figdata_png = base64.b64encode(figfile.getvalue())
-    
-    with open('/tmp/test.html','w') as f:
+
+    with open('/tmp/test.html', 'w') as f:
         f.write('''<html>
             <img src="data:image/svg+xml;base64,{}" />
         </html>'''.format(figdata_png.decode('ascii')))
+
 
 if __name__ == '__main__':
     col_x, col_y, headers, data = parse('data.dat')
