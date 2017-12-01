@@ -37,9 +37,11 @@ print("Ideal:         A={:.2f} center={:.2f} fwhm={:.2f} (sigma={:.2f}).".format
 # Guess for  A, center, fwhm from the y_noise!
 #
 A = np.max(y_noise) - np.min(y_noise)
-center = np.mean(x)
-sigma = np.sqrt(np.abs(np.sum(
-    (x-(np.sum(x*y_noise)/np.sum(y_noise)))**2 * y_noise)/np.sum(y_noise)))
+center = np.sum(x*y_noise)/np.sum(y_noise)
+sigma = np.sqrt(np.abs(
+    np.sum((x-center)**2 * y_noise)/np.sum(y_noise)
+))
+
 fwhm = 2 * sigma
 print("Using guess:   A={:.2f} center={:.2f} fwhm={:.2f} (sigma={:.2f}).".format(
     A, center, fwhm, sigma))

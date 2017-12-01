@@ -24,10 +24,10 @@ def gaussian(x, A, center, fwhm):
 #
 # Gaussian parameters
 A = 5
-center = 5
+center = 2
 fwhm = 2
 
-x = np.linspace(0, 10, 50)
+x = np.linspace(0, 11, 60)
 y = gaussian(x, A, center, fwhm)
 # Add random noise to the data
 y_noise = y + np.random.normal(0, 0.3, len(y))
@@ -40,9 +40,11 @@ print("Ideal:         A={:.2f} center={:.2f} fwhm={:.2f} (sigma={:.2f}).".format
 # Guess for  A, center, fwhm from the y_noise!
 #
 A = np.max(y_noise) - np.min(y_noise)
-center = np.mean(x)
-sigma = np.sqrt(np.abs(np.sum(
-    (x-(np.sum(x*y_noise)/np.sum(y_noise)))**2 * y_noise)/np.sum(y_noise)))
+center = np.sum(x*y_noise)/np.sum(y_noise)
+sigma = np.sqrt(np.abs(
+    np.sum((x-center)**2 * y_noise)/np.sum(y_noise)
+))
+
 fwhm = sigma * np.sqrt(8*np.log(2))
 print("Using guess:   A={:.2f} center={:.2f} fwhm={:.2f} (sigma={:.2f}).".format(
     A, center, fwhm, sigma))
