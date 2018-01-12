@@ -13,34 +13,104 @@ f = h5py.File("/SNS/MANDI/IPTS-8776/0/5800/NeXus/MANDI_5800_event.nxs", "r")
 
 event_banks = [item for item in f["entry"].values() if isinstance(item, h5py.Group) and item.name.endswith("events")]
 
-columns = ["bank_number", "pixel_id"]
 df = pd.DataFrame()
 
-for bank in event_banks:
+for bank in event_banks[-1:]: # For debug use event_banks[-1:]
+    
+    #
+    # index is event id, value is pixel_id
+    event_pixel_id = bank["event_id"].value
+    
+    #
+    # create tmp df with the pixel_id inside
+    df_tmp = pd.DataFrame(
+        data = event_pixel_id,
+        columns = ['pixel_id']
+    )
+    
+    #
+    # Get the Pixels position 256x256 = 65536
+    pixel_ids = bank["pixel_id"].value
+    # flatten pixel_ids and get respective indices
+    XX,YY = np.meshgrid(np.arange(pixel_ids.shape[1]),np.arange(pixel_ids.shape[0]))
+    # 2d array of the format: pixel_id, i, j
+    pixel_id_and_indices = np.vstack((pixel_ids.ravel(),XX.ravel(),YY.ravel())).T
+    
+    # tmp df for detector info
+    df_tmp2 = pd.DataFrame(
+        data=pixel_id_and_indices,
+        columns=['pixel_id', 'i', 'j'],
+    )
+    # Left join
+    df_tmp = pd.merge(left=df_tmp,right=df_tmp2, how='left', left_on='pixel_id', right_on='pixel_id')
+    # remove the pixel_id (we don't need it amy more)
+    df_tmp = df_tmp.drop('pixel_id', 1)
+
+    #
+    # index is event id, value time
+    event_time_offset = bank["event_time_offset"].value
+    df_tmp['time_offset'] = event_time_offset
+
+
+
+
+
+    # Length pulses != events
+    #
+    # index is pulse id, value is event_id
+    pulse_event_index = bank["event_index"].value
+    pulse_event_index_step = np.diff(pulse_event_index) # difference between the current and previous
+    pulse_event_index_step = np.insert(pulse_event_index_step,0,0) # Insert 0 in the beggining
+    #
+    # index is pulse id, value pulse 0 time
+    pulse_time_zero = bank["event_time_zero"].value
+    pulse_time_zero_with_event = pulse_time_zero[pulse_event_index_step>0] # only where there is a count
+    pulse_event_index_with_event = pulse_event_index[pulse_event_index_step>0]
+
+    df_tmp2 = pd.DataFrame(
+        data= np.column_stack((pulse_event_index_with_event,pulse_time_zero_with_event)),
+        columns=['event_id', 'time_zero'],
+    )
+    df_tmp2.event_id = df_tmp2.event_id.astype(np.int64)
+    # Left join
+    df_tmp = pd.merge(left=df_tmp,right=df_tmp2, how='left',  left_index = True, right_on='event_id')
+    df_tmp = df_tmp.fillna(method='bfill') # fill nans with the value from the next cell
+
+
+
+    #
     # get the bank number
     pattern = re.compile(r"/entry/bank(\d+)_events")
     match = pattern.match(bank.name)
     bank_number = int(match.group(1))
 
-    # # Pixels: 65536
-    # pixel_ids = bank["pixel_id"].value
-    # # flatten pixel_ids and get respective indices
-    # XX,YY = np.meshgrid(np.arange(pixel_ids.shape[1]),np.arange(pixel_ids.shape[0]))
-    # pixel_id_and_indices = np.vstack((pixel_ids.ravel(),XX.ravel(),YY.ravel())).T
-    
-    # index is event id, value is pixel_id
-    # len 587581
-    event_id = bank["event_id"].value
-    # index is event id, value time
-    # len 587581
-    time = bank["event_time_offset"].value
-    
-    bank_name = np.array([bank_number]*len(time))
-    data = np.array([bank_name, event_id]).T
-    df_tmp = pd.DataFrame(data, index=time, columns=columns)
+    #
+    # Bank Number
+    bank_number_array = np.array([bank_number]*len(df_tmp))
+    df_tmp['bank_id'] = bank_number_array
+
+    # Append to the final table
     df = df.append(df_tmp, ignore_index = True)
 
-df.index = pd.to_timedelta(df.index, unit="us")
+#
+# Convert TOF number to time_delta
+# SLOW!
+df['time_offset'] = pd.to_timedelta(df['time_offset'],  unit="us")
+
+# SLOW
+start_date = np.datetime64(f['entry']['start_time'].value[0])
+df['time_zero'] = pd.to_timedelta(df.time_zero) + start_date
+df = df.set_index('time_zero')
+
+# We don't need event id
+df = df.drop('event_id', 1)
+
+
+#
+# TODO HERE
+#
+
+df.resample("100us").sum()
 
 #Selection:
 df.ix['1970-01-01 00:00:00.023490000':'1970-01-01 00:00:00.023494974']
