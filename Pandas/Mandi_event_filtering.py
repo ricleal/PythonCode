@@ -8,26 +8,27 @@ import re
 
 from datetime import datetime
 
-f = h5py.File("/SNS/MANDI/IPTS-8776/0/5800/NeXus/MANDI_5800_event.nxs", "r")
+# f = h5py.File("/SNS/MANDI/IPTS-8776/0/5800/NeXus/MANDI_5800_event.nxs", "r")
+f = h5py.File("/Users/rhf/MANDI_5800_event.nxs", "r")
 
 
 event_banks = [item for item in f["entry"].values() if isinstance(item, h5py.Group) and item.name.endswith("events")]
 
 df = pd.DataFrame()
 
-for bank in event_banks[-1:]: # For debug use event_banks[-1:]
-    
+for bank in event_banks[:2]: # For debug use event_banks[-1:]
+
     #
     # index is event id, value is pixel_id
     event_pixel_id = bank["event_id"].value
-    
+
     #
     # create tmp df with the pixel_id inside
     df_tmp = pd.DataFrame(
         data = event_pixel_id,
         columns = ['pixel_id']
     )
-    
+
     #
     # Get the Pixels position 256x256 = 65536
     pixel_ids = bank["pixel_id"].value
@@ -35,7 +36,7 @@ for bank in event_banks[-1:]: # For debug use event_banks[-1:]
     XX,YY = np.meshgrid(np.arange(pixel_ids.shape[1]),np.arange(pixel_ids.shape[0]))
     # 2d array of the format: pixel_id, i, j
     pixel_id_and_indices = np.vstack((pixel_ids.ravel(),XX.ravel(),YY.ravel())).T
-    
+
     # tmp df for detector info
     df_tmp2 = pd.DataFrame(
         data=pixel_id_and_indices,
@@ -50,9 +51,6 @@ for bank in event_banks[-1:]: # For debug use event_banks[-1:]
     # index is event id, value time
     event_time_offset = bank["event_time_offset"].value
     df_tmp['time_offset'] = event_time_offset
-
-
-
 
 
     # Length pulses != events
@@ -98,12 +96,34 @@ for bank in event_banks[-1:]: # For debug use event_banks[-1:]
 df['time_offset'] = pd.to_timedelta(df['time_offset'],  unit="us")
 
 # SLOW
+1103776 rows × 6 columns
+
+# Just to make sure start and end times makes sense
 start_date = np.datetime64(f['entry']['start_time'].value[0])
-df['time_zero'] = pd.to_timedelta(df.time_zero) + start_date
+print(start_date)
+end_time = np.datetime64(f['entry']['end_time'].value[0])
+print(end_time)
+
+# SLOW
+df['time_zero'] = pd.to_timedelta(df.time_zero, unit='s') + start_date
 df = df.set_index('time_zero')
 
 # We don't need event id
 df = df.drop('event_id', 1)
+
+
+# TOF Range
+df.time_offset.min(),df.time_offset.max()
+
+
+# Select a date range
+df.loc['2016-07-15 09:00:00.0':'2016-07-15 10:00:00.0']
+
+see how many neutrons every pixel
+df.groupby(["bank_id","i","j"]).count()
+
+# Rebining by tof bin 1000us
+df.groupby(['bank_id','i','j']).time_offset.resample('1000us').count()
 
 
 #
