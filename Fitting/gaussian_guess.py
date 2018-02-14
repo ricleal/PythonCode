@@ -3,7 +3,7 @@
 
 Simple Gaussian coeffs estimation
 
-$ python gaussian_guess.py 
+$ python gaussian_guess.py
 Ideal:         A=5.00 center=5.00 fwhm=2.00 (sigma=0.85).
 Using guess:   A=5.63 center=5.00 fwhm=1.52 (sigma=0.65).
 Fitted Coeffs: A=4.99 center=4.95 fwhm=1.99 (sigma=0.84).
@@ -63,7 +63,8 @@ y_fit = gaussian(x, *coefficients)
 plt.figure()
 plt.plot(x, y, '-', label="Perfect")
 # plt.plot(x, y_noise, '.', label="noise")
-plt.errorbar(x, y_noise, yerr=y_error, fmt='o', capthick=2, label="Noisy")
+plt.errorbar(x, y_noise, yerr=y_error, fmt='.', label="Noisy")
+plt.plot(x, gaussian(x, A, center, fwhm), '-', label="Guess")
 plt.plot(x, y_fit, '-', label="Fit")
 plt.legend()
 plt.show()
