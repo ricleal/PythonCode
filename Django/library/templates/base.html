@@ -1,0 +1,33 @@
+{# Load the tag library #}
+{% load bootstrap4 %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>{% block title %}My Cool Website{% endblock %}</title>
+    {# Load CSS and JavaScript #}
+    {% bootstrap_css %}
+    {% bootstrap_javascript jquery='full' %}
+    <style>
+            body {
+                padding-top: 5rem;
+              }
+              .centred {
+                padding: 3rem 1.5rem;
+                text-align: center;
+              }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="centred">
+            {% block content %} This is the index  {% endblock %}
+        </div>
+        {# Display django.contrib.messages as Bootstrap alerts #}
+        {% bootstrap_messages %}
+    </div>
+</body>
+
+</html>

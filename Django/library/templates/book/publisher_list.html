@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Publisher</h1>
+
+<ul class="list-group">
+  {% for object in object_list %}
+    <li class="list-group-item">{{ object }}</li>
+  {% endfor %}
+</ul>
+
+{% endblock %}
