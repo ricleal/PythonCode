@@ -31,18 +31,18 @@ from pprint import pprint
 from multiprocessing import Process, Queue, Lock
 
 
-# logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-N = 10 # Number of parallel cycles
+N = 1000 # Number of parallel cycles
 DB = "/tmp/test.db"
 
 def insert_into_db(conn, key, value):
     try:
         with conn:
             cursor = conn.cursor()
-            cursor.execute("INSERT INTO pairs VALUES (?,?)", (key,value))
+            cursor.execute("INSERT INTO pairs VALUES (?,?)", (key, value))
             cursor.close()
     except sqlite3.OperationalError as e:
         logger.error("--------- insert_into_db")
@@ -53,7 +53,7 @@ def fetch_from_db(conn, key):
     try:
         with conn:
             cursor = conn.cursor()
-            cursor.execute('SELECT key,value FROM pairs WHERE key=?', (key,) )
+            cursor.execute('SELECT key,value FROM pairs WHERE key=?', (key,))
             result = cursor.fetchone()
             cursor.close()
         return result
@@ -84,6 +84,7 @@ def fetch_or_insert(conn, key, queue, lock):
         lock.release()
         result = (key, value)
     queue.put(result)
+
 
 def show_queue_contents(queue):
     '''
@@ -121,7 +122,7 @@ if __name__ == '__main__':
 
     jobs = []
     for _ in range(N):
-        key = random.randint(1,10)
+        key = random.randint(1, int(N/2))
         p = Process(target=fetch_or_insert, args=(conn, key, queue, lock, ))
         jobs.append(p)
         p.start()

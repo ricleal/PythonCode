@@ -36,7 +36,7 @@ logging.basicConfig(level=logging.DEBUG)
 # logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-N = 10 # Number of parallel cycles
+N = 1000 # Number of parallel cycles
 
 def insert_into_db(db_name, key, value):
     try:
@@ -97,8 +97,6 @@ def random_str_generator(size=6, chars=string.ascii_letters + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 
-
-
 if __name__ == '__main__':
 
     with tempfile.NamedTemporaryFile(suffix=".db") as temp:
@@ -109,7 +107,8 @@ if __name__ == '__main__':
         conn = sqlite3.connect(temp.name)
         try:
             cursor = conn.cursor()
-            cursor.execute('''CREATE TABLE pairs ( key int primary key not null, value text not null)''')
+            cursor.execute('''CREATE TABLE pairs ( key int primary key not \
+                null, value text not null)''')
             conn.commit()
         except sqlite3.OperationalError as e:
             logger.error("Looks like the table pairs exist already...")
@@ -123,7 +122,7 @@ if __name__ == '__main__':
         pool = Pool(processes=cpu_count()-1)
         # pool = Pool(processes=2,)
         for _ in range(N):
-            key = random.randint(1,10)
+            key = random.randint(1, int(N/2))
             pool.apply_async(
                 fetch_or_insert,
                 (temp.name, key, lock, ),
