@@ -1,0 +1,21 @@
+{
+  "name": "asyncssh",
+  "authors": [
+    "Chris Ostrouchov <chris.ostrouchov@gmail.com>"
+  ],
+  "description": "Asnyc SSH HTTP client",
+  "main": "",
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "static/bower_components/",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "xterm.js": "sourcelair/xterm.js#^2.2.2"
+  }
+}

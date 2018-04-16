@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Aiohttp demo</title>
+    </head>
+    <body>
+
+        <h1>Aiohttp demo</h1>
+
+        <h3>Web socket responses will go here:</h3>
+        <ol class="responses"></ol>
+
+        <h3>Send messages to the server here:</h3>
+        <form class="message">
+            <input name="message" type="text" placeholder="Message" required>
+            <input type="submit" value="Send Message">
+        </form>
+
+        <script>
+         var responses = document.querySelector('.responses');
+         var message = document.querySelector('.message');
+
+         var ws = new WebSocket('ws://localhost:8080/ws');
+
+         ws.onmessage = function(message) {
+             var li = document.createElement('li');
+             li.textContent = message.data;
+             responses.appendChild(li);
+         }
+
+         function handleSubmit(event) {
+             event.preventDefault();
+             var text = (this.querySelector('input[name="message"]')).value;
+             ws.send(text);
+             this.reset();
+         }
+
+         message.addEventListener('submit', handleSubmit);
+        </script>
+    </body>
+</html>
