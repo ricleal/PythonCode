@@ -2,7 +2,7 @@
 Description=My Service Socket
 
 [Socket]
-ListenStream=/tmp/mysocket.sock
+ListenStream=/tmp/mysocket_v1.sock
 Accept=yes
 
 [Install]

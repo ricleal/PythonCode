@@ -1,0 +1,14 @@
+[Unit]
+Description=My Service %I
+
+[Service]
+Type=simple
+ExecStartPre=/bin/bash -c 'echo "Server will run with instance: %i"'
+ExecStart=/usr/bin/python /home/rhf/git/PythonCode/SystemD/v2/server.py %i
+StandardInput=socket
+
+#StandardError=journal
+#TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+[Unit]
+Description=Worker %i
+Requires=web@%i.socket
+
+[Service]
+Type=simple
+# ExecStart=/usr/bin/twistd --nodaemon --logfile=- --pidfile= web --port systemd:domain=INET:index:0 --path /tmp
+
+WorkingDirectory=/home/rhf/git/WebReduction/src
+ExecStart=/home/rhf/.local/bin/daphne \
+    -e systemd:domain=INET:index=0 \
+    server.asgi:application
+
+NonBlocking=yes
+
+
+

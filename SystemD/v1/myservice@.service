@@ -5,7 +5,7 @@ Requires=myservice.socket
 [Service]
 Type=simple
 ExecStartPre=/bin/bash -c 'echo "Server will run with instance: %i"'
-ExecStart=/usr/bin/python /home/rhf/git/PythonCode/SystemD/server.py %i
+ExecStart=/usr/bin/python /home/rhf/git/PythonCode/SystemD/v1/server.py %i
 StandardInput=socket
 
 #StandardError=journal

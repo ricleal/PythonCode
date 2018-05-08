@@ -21,7 +21,7 @@ Load the services:
 systemctl --user daemon-reload
 
 # Start the socket
-systemctl --user start myservice.socket
+systemctl --user start myservice@{1..2}.service.
 
 ```
 
