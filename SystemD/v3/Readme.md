@@ -16,19 +16,29 @@ cp web* $HOME/.config/systemd/user/
 Every time the source code changes:
 
 ```
-
-cp web* $HOME/.config/systemd/user/ && \
-systemctl --user daemon-reload && \
-systemctl --user start web@{1..2}.socket
+ systemctl --user stop web@{1..2}.socket && \
+ systemctl --user stop web@{1..2}.service && \
+ cp web* $HOME/.config/systemd/user/ && \
+ systemctl --user daemon-reload && \
+ systemctl --user start web@{1..2}.socket
 
 ```
 
+Test it:
 
 
 ```sh
-# test it
+echo "Hello World" | nc -l -p 8889
 
-echo -e "GET / HTTP/1.1\nHost: localhost\nConnection: close\n\n" | nc -v localhost 8888
+# or
+cat /etc/passwd | while read line; do
+    echo "$line" | nc -U /tmp/mysocket_v1.sock
+done
 
+```
 
+To watch it:
+
+```sh
+journalctl -f --user-unit web@.service
 ```
