@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>SSH Server: asyncssh + aiohttp</title>
+    </head>
+    <body>
+        <div class="stdout"></div>
+
+        <form class="stdin">
+            <input name="command" type="text" placeholder="Command" required>
+            <input type="submit" value="Run Command">
+        </form>
+
+        <script>
+         var stdin = document.querySelector('.stdin');
+         var stdout = document.querySelector('.stdout');
+
+         var ws = new WebSocket('ws://localhost:8080/ws');
+
+         ws.onmessage = function(message) {
+             var pre = document.createElement('pre');
+             pre.textContent = message.data;
+             stdout.appendChild(pre);
+         }
+
+         function handleSubmit(event) {
+             event.preventDefault();
+             var text = (this.querySelector('input[name="command"]')).value;
+             // newline necissary to submit command just like in shell
+             ws.send(text + '\n');
+             this.reset();
+         }
+
+         stdin.addEventListener('submit', handleSubmit);
+        </script>
+    </body>
+</html>

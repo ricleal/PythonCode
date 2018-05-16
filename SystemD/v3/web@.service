@@ -1,0 +1,13 @@
+[Unit]
+Description=Worker %i
+Requires=web@%i.socket
+
+[Service]
+Type=simple
+
+ExecStart=/usr/bin/python3 /home/rhf/git/PythonCode/SystemD/v3/server.py
+
+NonBlocking=yes
+
+
+

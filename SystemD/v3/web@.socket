@@ -1,0 +1,10 @@
+[Unit]
+Description=Socket for worker %i
+
+[Socket]
+ListenStream = 8889
+ReusePort = true
+Service = web@%i.service
+
+[Install]
+WantedBy = sockets.target
