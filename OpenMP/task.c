@@ -2,22 +2,20 @@
 #include <math.h>
 #include <stdio.h>
 
-void do_some_omp_task(float* input_array, float* output_array, size_t size) {
+// Recursive fibonacci
+size_t fibonacci(size_t n){
+  if (n == 0 || n == 1)
+    return n;
+  else
+    return (fibonacci(n-1) + fibonacci(n-2));
+}
 
-	int i;
+// Main function
+void do_some_omp_task(size_t *input_array, size_t *output_array, size_t size) {
+	size_t i;
 #pragma omp parallel for default(shared) private(i)
-	for (i = 0; i < size; i++) {
-		output_array[i] = sqrt( pow(input_array[i], input_array[i])
-				* sin(input_array[i])
-				* exp(input_array[i])
-				* cos(input_array[i])
-				* asin(input_array[i])
-				* acos(input_array[i])
-				* tan(input_array[i])
-				* atan(input_array[i])
-				* pow( tan(input_array[i]), atan(input_array[i]))
-				);
-
-
+	for (i = 0; i < size; i++)
+	{	
+		output_array[i] = fibonacci(input_array[i]);
 	}
 }
