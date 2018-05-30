@@ -28,7 +28,7 @@ multiply_them(
     drv.Out(dest),
     drv.In(a), drv.In(b),
     block=(BLOCK_SIZE, 1, 1),
-    grid=(N/BLOCK_SIZE,1), # A grid is divided into blocks!
+    grid=(N/BLOCK_SIZE, 1),  # A grid is divided into blocks!
 )
 
 print("N = {}".format(N))
