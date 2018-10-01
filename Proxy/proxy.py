@@ -96,7 +96,7 @@ class Connection(object):
         Sets connection proxy.
         if proxy_dic is None get's teh proxy from the system.
         To disable autodetected proxy pass an empty dictionary: {}
-        @param proxy_dic: format: {'http': 'http://www.example.com:3128/'}               
+        @param proxy_dic: format: {'http': 'http://www.example.com:3128/'}
         '''
         if proxy_dic is None:
             # The default is to read the list of proxies from the environment variables <protocol>_proxy.
@@ -111,10 +111,10 @@ class Connection(object):
             proxy = urllib2.ProxyHandler(proxy_dic)
         opener = urllib2.build_opener(proxy)
         urllib2.install_opener(opener)
-    
-    
-   
-    
+
+
+
+
     def connect(self):
         '''
         Performs the request and gets a response from self.url

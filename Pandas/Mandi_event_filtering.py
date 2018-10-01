@@ -8,8 +8,8 @@ import re
 
 from datetime import datetime
 
-# f = h5py.File("/SNS/MANDI/IPTS-8776/0/5800/NeXus/MANDI_5800_event.nxs", "r")
-f = h5py.File("/Users/rhf/MANDI_5800_event.nxs", "r")
+f = h5py.File("/SNS/MANDI/IPTS-8776/0/5800/NeXus/MANDI_5800_event.nxs", "r")
+# f = h5py.File("/Users/rhf/MANDI_5800_event.nxs", "r")
 
 
 event_banks = [item for item in f["entry"].values() if isinstance(item, h5py.Group) and item.name.endswith("events")]
@@ -95,9 +95,6 @@ for bank in event_banks[:2]: # For debug use event_banks[-1:]
 # SLOW!
 df['time_offset'] = pd.to_timedelta(df['time_offset'],  unit="us")
 
-# SLOW
-1103776 rows × 6 columns
-
 # Just to make sure start and end times makes sense
 start_date = np.datetime64(f['entry']['start_time'].value[0])
 print(start_date)
@@ -119,7 +116,7 @@ df.time_offset.min(),df.time_offset.max()
 # Select a date range
 df.loc['2016-07-15 09:00:00.0':'2016-07-15 10:00:00.0']
 
-see how many neutrons every pixel
+# see how many neutrons every pixel
 df.groupby(["bank_id","i","j"]).count()
 
 # Rebining by tof bin 1000us
@@ -130,20 +127,20 @@ df.groupby(['bank_id','i','j']).time_offset.resample('1000us').count()
 # TODO HERE
 #
 
-df.resample("100us").sum()
+# df.resample("100us").sum()
 
-#Selection:
-df.ix['1970-01-01 00:00:00.023490000':'1970-01-01 00:00:00.023494974']
+# #Selection:
+# df.ix['1970-01-01 00:00:00.023490000':'1970-01-01 00:00:00.023494974']
 
-df.resample("100us")
+# df.resample("100us")
 
-counts = df.groupby(["bank_number", "pixel_id"]).count()
+# counts = df.groupby(["bank_number", "pixel_id"]).count()
 
-counts = df.groupby(pd.Grouper(freq='100us'))["bank_number", "pixel_id"]
+# counts = df.groupby(pd.Grouper(freq='100us'))["bank_number", "pixel_id"]
 
 
-df.groupby(pd.Grouper(freq='100us')).apply(lambda x: x.groupby(["bank_number", "pixel_id"]).sum())
+# df.groupby(pd.Grouper(freq='100us')).apply(lambda x: x.groupby(["bank_number", "pixel_id"]).sum())
 
-df.groupby(df.index)["bank_number", "pixel_id"].nunique()
+# df.groupby(df.index)["bank_number", "pixel_id"].nunique()
 
-df["conc"] = df.apply(lambda x: x["bank_id"]*100000+x["pixel_d"])
+# df["conc"] = df.apply(lambda x: x["bank_id"]*100000+x["pixel_d"])

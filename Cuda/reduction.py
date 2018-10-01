@@ -16,7 +16,8 @@ mod = SourceModule("""
 __inline__ __device__
 int warpReduceSum(int val) {
   for (int offset = warpSize/2; offset > 0; offset /= 2) 
-    val += __shfl_down(val, offset);
+    // val += __shfl_down(val, offset);
+    val += __shfl_down_sync(0xFFFFFFFF, val, offset);
   return val;
 }
 
@@ -45,7 +46,7 @@ __global__ void deviceReduceKernel(int *in, int* out) {
   int sum = 0;
   int N = blockDim.x * gridDim.x;
 
-  printf(" %d", N);
+  //printf(" %d", blockIdx.x * blockDim.x + threadIdx.x);
 
   //reduce multiple elements per thread
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; 
@@ -61,13 +62,13 @@ __global__ void deviceReduceKernel(int *in, int* out) {
 """)
 
 
-N = 1024*1024
-a = np.arange(N).astype(np.float32)
+N = 64*64
+a = np.arange(N).astype(np.f32)
 
 threads = 512 # Threads per block
 blocks =  int(N / threads) # Number of blocks in the grid
 
-print("Threads = {} Blocks = {}. Total={}".format(threads, blocks, N))
+print("Threads = {} Blocks = {}; Total = {}".format(threads, blocks, N))
 # NP
 reduction_np = np.sum(a)
 print(reduction_np)

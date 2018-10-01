@@ -19,12 +19,13 @@ username = sys.stdin.readline().strip()
 password = getpass.getpass()
 
 
-class TokenStore(object):
+class TokenHandler(object):
     '''
     One Token per user!
     '''
 
     oncat_token_url = 'https://oncat.ornl.gov/oauth/token'
+
     def __init__(self, username, password):
         '''
         Init is sort of a login on real website
@@ -34,14 +35,20 @@ class TokenStore(object):
 
     @property
     def token(self):
+        '''
+        Fecth forom the session?
+        '''
         return self._token
     
     @token.setter
     def token(self, val):
+        '''
+        Set it in the session
+        '''
         self._token = val
     
     @token.deleter
-    def token(self):  
+    def token(self):
         del self._token
     
     def _create_auth_client(self):
@@ -78,7 +85,7 @@ class TokenStore(object):
             token_updater=self.token,
         )
 
-t = TokenStore(
+t = TokenHandler(
     username,
     password,
 )
