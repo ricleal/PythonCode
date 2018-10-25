@@ -1,9 +1,4 @@
-'''
-Created on August 2012
-
-@author: ricardo.leal@ill.fr
-
-'''
+#!/usr/bin/python2
 
 import nxs, os, sys
 import numpy as np
