@@ -1,0 +1,2 @@
+cassandra-driver>=3.13.0
+msgpack-python>=0.5.5
