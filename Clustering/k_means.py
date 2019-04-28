@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 from time import sleep
 
+'''
+K means algorithm
+visualisation how it evolves with time
+'''
+
 
 class KMeans(object):
 
@@ -23,8 +28,7 @@ class KMeans(object):
 
     def _init_plot(self):
         self.fig, self.ax = plt.subplots()
-        # plt.ion()
-        # plt.show()
+        plt.show()
 
     def update_plot(self):
         self.ax.clear()
@@ -35,14 +39,13 @@ class KMeans(object):
             self.ax.scatter(x, y, c=c)
             x, y = self.ks[k_idx]
             self.ax.scatter(x, y, c=c, marker='^', edgecolors='black')
-        # plt.show()
-        # plt.draw()
+        # update the plot
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
     def distance_to_k(self):
         '''distance between the centre of the clusters k and the points
-        coumns are the '''
+        coumns are the centroids of the clusters'''
         distance_matrix = np.empty([len(self.points), len(self.ks)])
         for idx, k in enumerate(self.ks):
             dist = (self.points - k)**2
@@ -87,16 +90,24 @@ class KMeans(object):
 
 
 if __name__ == "__main__":
-    k = 5
-    N = 50  # N points to cluster
-    
-    points = np.random.randint(1, high=7, size=(N, 2)) + np.random.rand(N, 2)
-    
-    # points = np.empty([0, 2])
-    # for idx in range(k):
-    #     mean = np.random.rand(2)
-    #     cov = [[1, 0], [0, 1]]
-    #     points = np.append(points, np.random.multivariate_normal(mean, cov, 50), axis=0)
+    np.random.seed(2)
 
-    km = KMeans(points, 5)
+    # cluster are random points
+    K = 5
+    N = 50  # N points to cluster
+    points = np.random.randint(1, high=7, size=(N, 2)) + np.random.rand(N, 2)
+    km = KMeans(points, K)
     km.run()
+    del km
+
+    # define clusters as gaussian distributions
+    points = np.empty([0, 2])
+    points = np.append(points, np.random.multivariate_normal(
+        [0.1, 0.1], [[0.01, 0], [0, 0.01]], 50), axis=0)
+    points = np.append(points, np.random.multivariate_normal(
+        [0.2, 0.9], [[0.01, 0], [0, 0.01]], 50), axis=0)
+    points = np.append(points, np.random.multivariate_normal(
+        [0.9, 0.9], [[0.005, 0], [0, 0.1]], 150), axis=0)
+    km = KMeans(points, 3)
+    km.run()
+    del km
