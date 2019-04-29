@@ -28,13 +28,13 @@ class KMeans(object):
 
     def _init_plot(self):
         self.fig, self.ax = plt.subplots()
+        self.cluster_color = cm.rainbow(np.linspace(0, 1, len(self.ks)))
+        plt.ion()
         plt.show()
 
     def update_plot(self):
         self.ax.clear()
-        color = cm.rainbow(np.linspace(0, 1, len(self.ks)))
-        for (k_idx, points), c in zip(self.k_map.items(), color):
-            # self.fig.clf()
+        for (k_idx, points), c in zip(self.k_map.items(), self.cluster_color):
             x, y = np.array(points).T
             self.ax.scatter(x, y, c=c)
             x, y = self.ks[k_idx]
@@ -82,7 +82,7 @@ class KMeans(object):
             self.find_new_centroid_positions()
 
             self.update_plot()
-            sleep(1)
+            sleep(0.5)
             if (ks_old == self.ks).all():
                 break
 
