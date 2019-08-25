@@ -7,6 +7,7 @@ import time
 pytest -vs test_mock.py
 '''
 
+
 class MyClass():
 
     def long_function(self, attr_a):
@@ -17,3 +18,7 @@ class MyClass():
     def get_content(url):
         response = requests.get(url)
         return dict(ok=response.ok, status_code=response.status_code)
+
+    @staticmethod
+    def add1(x):
+        return x+1
