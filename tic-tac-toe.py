@@ -2,12 +2,39 @@ from pprint import pprint
 import random
 
 
+class MoveError(Exception):
+    pass
+
+
 class TicTacToe:
+
     board = [
         ['-', '-', '-'],
         ['-', '-', '-'],
         ['-', '-', '-']
     ]
+
+    wining_combinations = [
+        [
+            [True, True, True],
+            [False, False, False],
+            [False, False, False],
+        ],
+        [
+            [False, False, False],
+            [True, True, True],
+            [False, False, False],
+        ],
+        [
+            [False, False, False],
+            [False, False, False],
+            [True, True, True],
+        ],
+
+    ]
+
+    USER_TOKEN = 'X'
+    COMPUTER_TOKEN = 'O'
 
     def __init__(self):
         pass
@@ -16,14 +43,14 @@ class TicTacToe:
         for row in self.board:
             print("|".join(row))
 
-    def add_token(self, token, row, col):
-        if token.capitalize() == 'X' or token.capitalize() == 'O':
-            if self.board[row][col] == '-':
-                self.board[row][col] = token
-            else:
-                print("The position is not empty")
+    def user_move(self, row, col):
+
+        if self.board[row][col] == '-':
+            self.board[row][col] = self.USER_TOKEN
+            return True
         else:
-            print("Use X or O")
+            print("The position is not empty")
+            return False
 
     def is_full(self):
         for row in self.board:
@@ -32,25 +59,23 @@ class TicTacToe:
                     return False
         return True
 
-    def ai_move(self):
+    def computer_move(self):
         row = random.randint(0, 2)
         col = random.randint(0, 2)
         if self.board[row][col] != '-':
-            raise Exception('Illegal move')
-        self.add_token('O', row, col)
+            raise MoveError('Illegal move')
+        self.board[row][col] = self.COMPUTER_TOKEN
 
 
 tic_tac_toe = TicTacToe()
-tic_tac_toe.add_token('X', 0, 1)
-tic_tac_toe.print_board()
 
-print("Is the board full?", tic_tac_toe.is_full())
 while not tic_tac_toe.is_full():
-    try:
-        tic_tac_toe.ai_move()
-    except Exception as e:
-        print(str(e))
-
-print("Is the board full?", tic_tac_toe.is_full())
-print(tic_tac_toe.is_full())
-tic_tac_toe.print_board()
+    tic_tac_toe.print_board()
+    row, col = raw_input("Enter: row col > ").strip().split()
+    tic_tac_toe.user_move(int(row), int(col))
+    while True:
+        try:
+            tic_tac_toe.computer_move()
+            break
+        except MoveError as e:
+            print(str(e))
