@@ -1,0 +1,7 @@
+database:
+  name: dev
+  username: !ENV ${DB_USER}
+  password: !ENV ${DB_PASS}
+  url: !ENV 'http://${DB_BASE_URL:default_host}:${DB_PORT}'
+  port: 3306
+  

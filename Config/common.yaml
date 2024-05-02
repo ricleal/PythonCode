@@ -1,0 +1,5 @@
+cluster:
+  name: xpto
+  host: example.com
+database:
+  port: 2524
