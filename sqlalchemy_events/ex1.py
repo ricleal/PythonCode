@@ -1,62 +1,20 @@
-"""
-SQLAlchemy Event Listeners - Synchronous Behavior Demonstration
-
-Purpose:
---------
-This example demonstrates that SQLAlchemy event listeners execute SYNCHRONOUSLY
-within the database transaction lifecycle. Key observations:
-
-1. Event listeners block the main thread - the commit() call waits for all
-   event handlers to complete before returning control.
-
-2. The 'after_flush' event fires during commit(), before data is committed,
-   allowing you to track changes while objects are still in their pre-commit state.
-
-3. The 'after_commit' event fires after successful commit, but still blocks
-   the calling code until all handlers complete.
-
-4. Time-consuming operations (like the simulated 1-second email delay) will
-   block the transaction, demonstrating the synchronous nature of these events.
-
-Use Cases:
-----------
-- Tracking changes to specific model attributes
-- Triggering actions after successful commits
-- Maintaining audit logs or change history
-- Sending notifications (though async alternatives are preferred for production)
-
-Note: For production systems with expensive I/O operations (emails, API calls),
-consider using async task queues (Celery, RQ) triggered by these events rather
-than performing the work directly in the event handlers.
-
-Expected Output:
-----------------
-$ python ex1.py
-
---- Case 1: Creating new user 'Alice' ---
-[FLUSH] Tracking new user: Alice
-[EMAIL] Sending 'Welcome' email to Alice (alice@example.com)
-[EMAIL] Email sent.
-[COMMIT] Finished processing actions.
-
---- Case 2: Updating 'Alice's email ---
-[FLUSH] Tracking updated user (email changed): Alice
-[EMAIL] Sending 'Profile Update' notification to Alice (alice_new@example.com)
-[EMAIL] Email sent.
-[COMMIT] Finished processing actions.
-
---- Case 3: Updating 'Alice's name (untracked attribute) ---
-[COMMIT] Finished processing actions.
-
-Notice the 1-second delay per email demonstrates synchronous blocking behavior.
-"""
+"""SQLAlchemy Event Listeners - Synchronous Execution Demo"""
 
 import time
 
 from sqlalchemy import Column, Integer, String, create_engine, event, inspect
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# 1. Setup the Database and Models
+# ANSI Color codes
+BLUE = "\033[94m"
+GREEN = "\033[92m"
+YELLOW = "\033[93m"
+MAGENTA = "\033[95m"
+CYAN = "\033[96m"
+RESET = "\033[0m"
+BOLD = "\033[1m"
+
+# Setup Database and Models
 Base = declarative_base()
 Engine = create_engine("sqlite:///:memory:")
 SessionLocal = sessionmaker(bind=Engine)
@@ -72,92 +30,121 @@ class User(Base):
 Base.metadata.create_all(Engine)
 
 
-# 2. Event Listeners
+# Event Listeners
 def send_email(user_info, action_type):
-    """Simulated function to send an email. Runs after commit."""
+    """Simulates email sending with 1s delay to demonstrate synchronous blocking."""
+    print(f"{MAGENTA}  [EMAIL START] Time: {time.strftime('%H:%M:%S')}{RESET}")
     if action_type == "created":
         print(
-            f"[EMAIL] Sending 'Welcome' email to {user_info['name']} ({user_info['email']})"
+            f"{MAGENTA}    [EMAIL] Sending 'Welcome' email to {user_info['name']} ({user_info['email']}){RESET}"
         )
     elif action_type == "updated":
         print(
-            f"[EMAIL] Sending 'Profile Update' notification to {user_info['name']} ({user_info['email']})"
+            f"{MAGENTA}    [EMAIL] Sending 'Profile Update' notification to {user_info['name']} ({user_info['email']}){RESET}"
         )
 
-    time.sleep(1)  # Simulate network delay
-    print("[EMAIL] Email sent.")
+    time.sleep(1)
+    print(f"{MAGENTA}  [EMAIL END] Time: {time.strftime('%H:%M:%S')} (took 1s){RESET}")
 
 
 @event.listens_for(SessionLocal, "after_flush")
 def track_changes_after_flush(session, flush_context):
-    """
-    Tracks new and updated User objects *before* commit.
-    Stores metadata in the session.info dictionary.
-    """
+    """Tracks User changes during flush (before commit)."""
+    print(f"{YELLOW}  [FLUSH EVENT] Time: {time.strftime('%H:%M:%S')}{RESET}")
     if "commit_actions" not in session.info:
         session.info["commit_actions"] = []
-    # Track new objects (insertions)
     for obj in session.new:
         if isinstance(obj, User):
-            # We must capture the data now, as objects expire after commit
             user_data = {"name": obj.name, "email": obj.email}
             session.info["commit_actions"].append(
                 {"type": "created", "data": user_data}
             )
-            print(f"[FLUSH] Tracking new user: {obj.name}")
-    # Track updated objects
+            print(f"{YELLOW}    Tracking new user: {obj.name}{RESET}")
+
     for obj in session.dirty:
         if isinstance(obj, User):
-            # Check if relevant attributes actually changed
             state = inspect(obj)
             if state.attrs.email.history.has_changes():
                 user_data = {"name": obj.name, "email": obj.email}
                 session.info["commit_actions"].append(
                     {"type": "updated", "data": user_data}
                 )
-                print(f"[FLUSH] Tracking updated user (email changed): {obj.name}")
+                print(
+                    f"{YELLOW}    Tracking updated user (email changed): {obj.name}{RESET}"
+                )
 
 
 @event.listens_for(SessionLocal, "after_commit")
 def process_actions_after_commit(session):
-    """
-    Executes actions (like sending emails) after a successful commit.
-    Cannot perform new SQL operations here.
-    """
-    # Retrieve tracked actions from session.info
+    """Processes actions after successful commit."""
+    print(f"{GREEN}  [COMMIT EVENT] Time: {time.strftime('%H:%M:%S')}{RESET}")
     actions = session.info.get("commit_actions", [])
     for action in actions:
         send_email(action["data"], action["type"])
-    # Clean up the info dictionary for the next transaction
     session.info.pop("commit_actions", None)
-    print("[COMMIT] Finished processing actions.")
+    print(f"{GREEN}  [COMMIT DONE] Time: {time.strftime('%H:%M:%S')}{RESET}")
 
 
-# 3. Demonstration of Usage
+# Demo
 if __name__ == "__main__":
     session = SessionLocal()
     try:
-        # --- Case 1: Create a new user ---
-        print("\n--- Case 1: Creating new user 'Alice' ---")
+        print(f"\n{BOLD}{CYAN}--- Case 1: Creating new user 'Alice' ---{RESET}")
+        print(f"{BLUE}Before commit: {time.strftime('%H:%M:%S')}{RESET}")
         alice = User(name="Alice", email="alice@example.com")
         session.add(alice)
-        session.commit()
-        # The after_flush and after_commit listeners run during the commit() call above.
-        # --- Case 2: Update an existing user ---
-        print("\n--- Case 2: Updating 'Alice's email ---")
-        # Note: 'alice' is now "expired" (attributes unloaded)
-        # We access an attribute to reload it from the DB
+        session.commit()  # Events execute synchronously here - blocks for ~1 second
+        print(f"{BLUE}After commit: {time.strftime('%H:%M:%S')}{RESET}\n")
+
+        print(f"\n{BOLD}{CYAN}--- Case 2: Updating Alice's email ---{RESET}")
+        print(f"{BLUE}Before commit: {time.strftime('%H:%M:%S')}{RESET}")
         alice.email = "alice_new@example.com"
-        session.add(
-            alice
-        )  # Not strictly necessary if already tracked, but good practice
-        session.commit()
-        # --- Case 3: Update an attribute that is *not* tracked ---
-        print("\n--- Case 3: Updating 'Alice's name (untracked attribute) ---")
-        alice.name = "Alice Liddell"  # We only track email changes in our listener
-        session.commit()  # No email will be sent for this change.
+        session.add(alice)
+        session.commit()  # Blocks again for ~1 second
+        print(f"{BLUE}After commit: {time.strftime('%H:%M:%S')}{RESET}\n")
+
+        print(f"\n{BOLD}{CYAN}--- Case 3: Updating Alice's name (untracked) ---{RESET}")
+        print(f"{BLUE}Before commit: {time.strftime('%H:%M:%S')}{RESET}")
+        alice.name = "Alice Liddell"
+        session.commit()  # No email sent, returns quickly
+        print(f"{BLUE}After commit: {time.strftime('%H:%M:%S')}{RESET}\n")
     except Exception as e:
         print(f"An error occurred: {e}")
         session.rollback()
     finally:
         session.close()
+
+# Example Output:
+#
+# ❯ python ex1.py
+
+# --- Case 1: Creating new user 'Alice' ---
+# Before commit: 10:40:31
+#   [FLUSH EVENT] Time: 10:40:31
+#     Tracking new user: Alice
+#   [COMMIT EVENT] Time: 10:40:31
+#   [EMAIL START] Time: 10:40:31
+#     [EMAIL] Sending 'Welcome' email to Alice (alice@example.com)
+#   [EMAIL END] Time: 10:40:32 (took 1s)
+#   [COMMIT DONE] Time: 10:40:32
+# After commit: 10:40:32
+
+
+# --- Case 2: Updating Alice's email ---
+# Before commit: 10:40:32
+#   [FLUSH EVENT] Time: 10:40:32
+#     Tracking updated user (email changed): Alice
+#   [COMMIT EVENT] Time: 10:40:32
+#   [EMAIL START] Time: 10:40:32
+#     [EMAIL] Sending 'Profile Update' notification to Alice (alice_new@example.com)
+#   [EMAIL END] Time: 10:40:33 (took 1s)
+#   [COMMIT DONE] Time: 10:40:33
+# After commit: 10:40:33
+
+
+# --- Case 3: Updating Alice's name (untracked) ---
+# Before commit: 10:40:33
+#   [FLUSH EVENT] Time: 10:40:33
+#   [COMMIT EVENT] Time: 10:40:33
+#   [COMMIT DONE] Time: 10:40:33
+# After commit: 10:40:33
