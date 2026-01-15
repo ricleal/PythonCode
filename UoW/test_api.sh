@@ -62,44 +62,65 @@ echo ""
 
 echo -e "${BLUE}6. Creating second access request${NC}"
 echo "---"
-http --ignore-stdin -vv POST ${API_URL}/access-requests/ \
+RESPONSE=$(http --ignore-stdin -vv POST ${API_URL}/access-requests/ \
   requester="jane.smith@example.com" \
   resource="AWS Production Account" \
   approvers:='[
     {"name": "Charlie Brown", "email": "charlie@example.com"},
     {"name": "Diana Prince", "email": "diana@example.com"}
-  ]'
+  ]')
 
 REQUEST_ID_2=$(echo "$RESPONSE" | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
 echo -e "${GREEN}✓ Created access request with ID: $REQUEST_ID_2${NC}"
 echo ""
 
-echo -e "${BLUE}7. Denying request $REQUEST_ID_2 - Charlie denies${NC}"
+echo -e "${BLUE}7. Testing multi-service endpoint - Approve with audit (Charlie approves $REQUEST_ID_2)${NC}"
 echo "---"
-http --ignore-stdin -vv POST ${API_URL}/access-requests/${REQUEST_ID_2}/deny \
+http --ignore-stdin -vv POST ${API_URL}/access-requests/${REQUEST_ID_2}/approve-with-audit \
   approver_email="charlie@example.com"
-echo -e "${GREEN}✓ Charlie denied the request (status should now be DENIED)${NC}"
+echo -e "${GREEN}✓ Charlie approved with audit logging (status should still be PENDING)${NC}"
 echo ""
 
-echo -e "${BLUE}8. Listing all access requests (should show 2 requests)${NC}"
+echo -e "${BLUE}8. Creating third access request${NC}"
+echo "---"
+RESPONSE=$(http --ignore-stdin -vv POST ${API_URL}/access-requests/ \
+  requester="test.user@example.com" \
+  resource="Staging Environment" \
+  approvers:='[
+    {"name": "Eve Wilson", "email": "eve@example.com"},
+    {"name": "Frank Miller", "email": "frank@example.com"}
+  ]')
+
+REQUEST_ID_3=$(echo "$RESPONSE" | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
+echo -e "${GREEN}✓ Created access request with ID: $REQUEST_ID_3${NC}"
+echo ""
+
+echo -e "${BLUE}9. Denying request $REQUEST_ID_3 - Eve denies${NC}"
+echo "---"
+http --ignore-stdin -vv POST ${API_URL}/access-requests/${REQUEST_ID_3}/deny \
+  approver_email="eve@example.com"
+echo -e "${GREEN}✓ Eve denied the request (status should now be DENIED)${NC}"
+echo ""
+
+echo -e "${BLUE}10. Listing all access requests (should show 3 requests)${NC}"
 echo "---"
 http --ignore-stdin -vv GET ${API_URL}/access-requests/
 echo -e "${GREEN}✓ Listed all access requests${NC}"
 echo ""
 
-echo -e "${BLUE}9. Listing only APPROVED requests${NC}"
+echo -e "${BLUE}11. Listing only APPROVED requests${NC}"
 echo "---"
 http --ignore-stdin -vv GET "${API_URL}/access-requests/?status_filter=APPROVED"
 echo -e "${GREEN}✓ Listed APPROVED requests${NC}"
 echo ""
 
-echo -e "${BLUE}10. Listing only DENIED requests${NC}"
+echo -e "${BLUE}12. Listing only DENIED requests${NC}"
 echo "---"
 http --ignore-stdin -vv GET "${API_URL}/access-requests/?status_filter=DENIED"
 echo -e "${GREEN}✓ Listed DENIED requests${NC}"
 echo ""
 
-echo -e "${BLUE}11. Listing only PENDING requests${NC}"
+echo -e "${BLUE}13. Listing only PENDING requests${NC}"
 echo "---"
 http --ignore-stdin -vv GET "${API_URL}/access-requests/?status_filter=PENDING"
 echo -e "${GREEN}✓ Listed PENDING requests${NC}"
@@ -108,7 +129,7 @@ echo ""
 echo -e "${YELLOW}Testing error cases...${NC}"
 echo ""
 
-echo -e "${BLUE}12. Try to create request with only 1 approver (should fail)${NC}"
+echo -e "${BLUE}14. Try to create request with only 1 approver (should fail)${NC}"
 echo "---"
 http --ignore-stdin -vv POST ${API_URL}/access-requests/ \
   requester="test@example.com" \
@@ -117,21 +138,21 @@ http --ignore-stdin -vv POST ${API_URL}/access-requests/ \
   || echo -e "${GREEN}✓ Correctly rejected request with only 1 approver${NC}"
 echo ""
 
-echo -e "${BLUE}13. Try to approve with wrong email (should fail)${NC}"
+echo -e "${BLUE}15. Try to approve with wrong email (should fail)${NC}"
 echo "---"
 http --ignore-stdin -vv POST ${API_URL}/access-requests/${REQUEST_ID_1}/approve \
   approver_email="wrong@example.com" \
   || echo -e "${GREEN}✓ Correctly rejected approval from non-approver${NC}"
 echo ""
 
-echo -e "${BLUE}14. Try to approve already finalized request (should fail)${NC}"
+echo -e "${BLUE}16. Try to approve already finalized request (should fail)${NC}"
 echo "---"
 http --ignore-stdin -vv POST ${API_URL}/access-requests/${REQUEST_ID_1}/approve \
   approver_email="alice@example.com" \
   || echo -e "${GREEN}✓ Correctly rejected approval of already finalized request${NC}"
 echo ""
 
-echo -e "${BLUE}15. Try to get non-existent request (should fail)${NC}"
+echo -e "${BLUE}17. Try to get non-existent request (should fail)${NC}"
 echo "---"
 http --ignore-stdin -vv GET ${API_URL}/access-requests/99999 \
   || echo -e "${GREEN}✓ Correctly returned 404 for non-existent request${NC}"

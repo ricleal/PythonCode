@@ -16,7 +16,11 @@ engine = create_async_engine(
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,  # Keep objects accessible after commit
+    autocommit=False,  # Require explicit commit
+    autoflush=False,  # Require explicit flush
 )
 
 

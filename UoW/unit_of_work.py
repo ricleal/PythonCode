@@ -55,6 +55,7 @@ class UnitOfWork:
 
     async def __aenter__(self):
         """Enter async context manager."""
+        # await self.session.begin(), not needed because sqlalchemy by default is autobegin
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

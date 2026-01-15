@@ -207,3 +207,45 @@ class AccessRequestService:
             raise AlreadyRespondedError(approver_email, approver.status.value)
 
         return approver
+
+
+class AuditService:
+    """Service class for audit logging business logic."""
+
+    def __init__(self, uow: UnitOfWork):
+        """
+        Initialize the service with a Unit of Work.
+
+        Args:
+            uow: Unit of Work instance for transaction management
+        """
+        self.uow = uow
+
+    async def log_approval_action(
+        self, request_id: int, approver_email: str, action: str
+    ) -> None:
+        """
+        Log an approval action (for demonstration purposes).
+
+        In a real application, this would write to an audit log table.
+
+        Args:
+            request_id: ID of the access request
+            approver_email: Email of the approver
+            action: Action taken (APPROVED/DENIED)
+        """
+        # In a real implementation, you'd add a record to an audit log table
+        # For now, we'll just demonstrate the pattern
+        print(f"AUDIT: Request {request_id} - {action} by {approver_email}")
+        
+        # If you had an audit repository:
+        # audit_entry = AuditLog(
+        #     request_id=request_id,
+        #     approver_email=approver_email,
+        #     action=action,
+        #     timestamp=utc_now()
+        # )
+        # self.uow.audit_logs.add(audit_entry)
+        # await self.uow.flush()
+        
+        # Note: We DON'T commit here - the caller will commit the entire transaction
