@@ -15,7 +15,7 @@ class AccessRequestRepository:
         self.session = session
 
     def add(self, access_request: AccessRequest) -> AccessRequest:
-        """Add a new access request."""
+        """Add a new access request to the session."""
         self.session.add(access_request)
         return access_request
 
@@ -44,11 +44,6 @@ class AccessRequestRepository:
         )
         return list(result.scalars().all())
 
-    def update(self, access_request: AccessRequest) -> AccessRequest:
-        """Update an access request."""
-        self.session.add(access_request)
-        return access_request
-
     async def delete(self, access_request: AccessRequest) -> None:
         """Delete an access request."""
         await self.session.delete(access_request)
@@ -61,7 +56,7 @@ class ApproverRepository:
         self.session = session
 
     def add(self, approver: Approver) -> Approver:
-        """Add a new approver."""
+        """Add a new approver to the session."""
         self.session.add(approver)
         return approver
 
@@ -89,11 +84,6 @@ class ApproverRepository:
             )
         )
         return result.scalar_one_or_none()
-
-    def update(self, approver: Approver) -> Approver:
-        """Update an approver."""
-        self.session.add(approver)
-        return approver
 
     async def delete(self, approver: Approver) -> None:
         """Delete an approver."""

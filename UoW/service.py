@@ -1,14 +1,23 @@
 """Service layer for business logic."""
 
-from datetime import datetime
-from typing import List
+from typing import List, Optional
 
-from models import AccessRequest, ApprovalStatus, Approver, RequestStatus
+from exceptions import (
+    AccessRequestNotFoundError,
+    AlreadyFinalizedError,
+    AlreadyRespondedError,
+    ApproverNotFoundError,
+    DuplicateApproverError,
+    InvalidApproverCountError,
+)
+from models import AccessRequest, ApprovalStatus, Approver, RequestStatus, utc_now
 from unit_of_work import UnitOfWork
 
 
 class AccessRequestService:
     """Service class for access request business logic."""
+
+    REQUIRED_APPROVERS = 2
 
     def __init__(self, uow: UnitOfWork):
         """
@@ -23,7 +32,7 @@ class AccessRequestService:
         self, requester: str, resource: str, approvers_data: List[dict]
     ) -> AccessRequest:
         """
-        Create a new access request with approvers in a single transaction.
+        Create a new access request with approvers.
 
         Args:
             requester: Email or name of the requester
@@ -34,28 +43,25 @@ class AccessRequestService:
             Created AccessRequest with approvers
 
         Raises:
-            ValueError: If validation fails
+            InvalidApproverCountError: If approver count doesn't match requirement
+            DuplicateApproverError: If duplicate approver emails are provided
         """
-        # Validate that we have exactly 2 approvers
-        if len(approvers_data) != 2:
-            raise ValueError("An access request must have exactly 2 approvers")
+        if len(approvers_data) != self.REQUIRED_APPROVERS:
+            raise InvalidApproverCountError(self.REQUIRED_APPROVERS, len(approvers_data))
 
-        # Validate that approvers have different emails
-        if approvers_data[0]["email"] == approvers_data[1]["email"]:
-            raise ValueError("Approvers must have different email addresses")
+        emails = [a["email"] for a in approvers_data]
+        if len(emails) != len(set(emails)):
+            duplicates = [e for e in emails if emails.count(e) > 1]
+            raise DuplicateApproverError(duplicates[0])
 
-        # All operations within this block are part of the same transaction
-        async with self.uow as uow:
-            # Create access request
+        async with self.uow:
             access_request = AccessRequest(
                 requester=requester, resource=resource, status=RequestStatus.PENDING
             )
-            uow.access_requests.add(access_request)
+            self.uow.access_requests.add(access_request)
 
-            # Flush to get the access_request ID
-            await uow.session.flush()
+            await self.uow.flush()
 
-            # Create approvers
             for approver_data in approvers_data:
                 approver = Approver(
                     access_request_id=access_request.id,
@@ -63,13 +69,12 @@ class AccessRequestService:
                     email=approver_data["email"],
                     status=ApprovalStatus.PENDING,
                 )
-                uow.approvers.add(approver)
+                self.uow.approvers.add(approver)
 
-            # Refresh to get all relationships before exiting context
-            await uow.session.refresh(access_request, ["approvers"])
+            await self.uow.flush()
+            await self.uow.refresh(access_request, ["approvers"])
 
-        # Return outside the context - relationships are already loaded
-        return access_request
+            return access_request
 
     async def approve_access_request(
         self, request_id: int, approver_email: str
@@ -85,55 +90,26 @@ class AccessRequestService:
             Updated AccessRequest
 
         Raises:
-            ValueError: If validation fails
+            AccessRequestNotFoundError: If request not found
+            AlreadyFinalizedError: If request is already finalized
+            ApproverNotFoundError: If approver not found
+            AlreadyRespondedError: If approver already responded
         """
-        # All operations within this block are part of the same transaction
-        async with self.uow as uow:
-            # Get the access request
-            access_request = await uow.access_requests.get_by_id(request_id)
-            if not access_request:
-                raise ValueError(f"Access request {request_id} not found")
+        async with self.uow:
+            access_request = await self._get_request_for_update(request_id)
+            approver = await self._get_approver_for_update(approver_email, request_id)
 
-            # Check if already finalized
-            if access_request.status != RequestStatus.PENDING:
-                raise ValueError(
-                    f"Access request is already {access_request.status.value}"
-                )
-
-            # Find the approver
-            approver = await uow.approvers.get_by_email_and_request(
-                approver_email, request_id
-            )
-
-            if not approver:
-                raise ValueError(
-                    f"Approver with email {approver_email} not found for this request"
-                )
-
-            # Check if approver has already responded
-            if approver.status != ApprovalStatus.PENDING:
-                raise ValueError(
-                    f"Approver has already {approver.status.value.lower()} this request"
-                )
-
-            # Update approver status
             approver.status = ApprovalStatus.APPROVED
-            approver.responded_at = datetime.utcnow()
-            uow.approvers.update(approver)
+            approver.responded_at = utc_now()
 
-            # Flush to update approver in the database
-            await uow.session.flush()
+            await self.uow.flush()
 
-            # Re-evaluate access request status
-            new_status = access_request.evaluate_status()
-            access_request.status = new_status
-            uow.access_requests.update(access_request)
+            access_request.status = access_request.evaluate_status()
 
-            # Refresh to ensure relationships are loaded before exiting context
-            await uow.session.refresh(access_request, ["approvers"])
+            await self.uow.flush()
+            await self.uow.refresh(access_request, ["approvers"])
 
-        # Return outside the context - relationships are already loaded
-        return access_request
+            return access_request
 
     async def deny_access_request(
         self, request_id: int, approver_email: str
@@ -149,55 +125,26 @@ class AccessRequestService:
             Updated AccessRequest
 
         Raises:
-            ValueError: If validation fails
+            AccessRequestNotFoundError: If request not found
+            AlreadyFinalizedError: If request is already finalized
+            ApproverNotFoundError: If approver not found
+            AlreadyRespondedError: If approver already responded
         """
-        # All operations within this block are part of the same transaction
-        async with self.uow as uow:
-            # Get the access request
-            access_request = await uow.access_requests.get_by_id(request_id)
-            if not access_request:
-                raise ValueError(f"Access request {request_id} not found")
+        async with self.uow:
+            access_request = await self._get_request_for_update(request_id)
+            approver = await self._get_approver_for_update(approver_email, request_id)
 
-            # Check if already finalized
-            if access_request.status != RequestStatus.PENDING:
-                raise ValueError(
-                    f"Access request is already {access_request.status.value}"
-                )
-
-            # Find the approver
-            approver = await uow.approvers.get_by_email_and_request(
-                approver_email, request_id
-            )
-
-            if not approver:
-                raise ValueError(
-                    f"Approver with email {approver_email} not found for this request"
-                )
-
-            # Check if approver has already responded
-            if approver.status != ApprovalStatus.PENDING:
-                raise ValueError(
-                    f"Approver has already {approver.status.value.lower()} this request"
-                )
-
-            # Update approver status
             approver.status = ApprovalStatus.DENIED
-            approver.responded_at = datetime.utcnow()
-            uow.approvers.update(approver)
+            approver.responded_at = utc_now()
 
-            # Flush to update approver in the database
-            await uow.session.flush()
+            await self.uow.flush()
 
-            # Re-evaluate access request status
-            new_status = access_request.evaluate_status()
-            access_request.status = new_status
-            uow.access_requests.update(access_request)
+            access_request.status = access_request.evaluate_status()
 
-            # Refresh to ensure relationships are loaded before exiting context
-            await uow.session.refresh(access_request, ["approvers"])
+            await self.uow.flush()
+            await self.uow.refresh(access_request, ["approvers"])
 
-        # Return outside the context - relationships are already loaded
-        return access_request
+            return access_request
 
     async def get_access_request(self, request_id: int) -> AccessRequest:
         """
@@ -210,16 +157,16 @@ class AccessRequestService:
             AccessRequest if found
 
         Raises:
-            ValueError: If not found
+            AccessRequestNotFoundError: If not found
         """
         access_request = await self.uow.access_requests.get_by_id(request_id)
         if not access_request:
-            raise ValueError(f"Access request {request_id} not found")
+            raise AccessRequestNotFoundError(request_id)
 
         return access_request
 
     async def list_access_requests(
-        self, status_filter: RequestStatus = None
+        self, status_filter: Optional[RequestStatus] = None
     ) -> List[AccessRequest]:
         """
         List all access requests, optionally filtered by status.
@@ -232,5 +179,31 @@ class AccessRequestService:
         """
         if status_filter:
             return await self.uow.access_requests.get_by_status(status_filter)
-        else:
-            return await self.uow.access_requests.get_all()
+        return await self.uow.access_requests.get_all()
+
+    async def _get_request_for_update(self, request_id: int) -> AccessRequest:
+        """Get and validate an access request for updating."""
+        access_request = await self.uow.access_requests.get_by_id(request_id)
+        if not access_request:
+            raise AccessRequestNotFoundError(request_id)
+
+        if access_request.status != RequestStatus.PENDING:
+            raise AlreadyFinalizedError(request_id, access_request.status.value)
+
+        return access_request
+
+    async def _get_approver_for_update(
+        self, approver_email: str, request_id: int
+    ) -> Approver:
+        """Get and validate an approver for updating."""
+        approver = await self.uow.approvers.get_by_email_and_request(
+            approver_email, request_id
+        )
+
+        if not approver:
+            raise ApproverNotFoundError(approver_email, request_id)
+
+        if approver.status != ApprovalStatus.PENDING:
+            raise AlreadyRespondedError(approver_email, approver.status.value)
+
+        return approver

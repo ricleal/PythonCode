@@ -1,6 +1,6 @@
 """Unit of Work pattern implementation."""
 
-from typing import Optional
+from typing import Optional, Sequence
 
 from repositories import AccessRequestRepository, ApproverRepository
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 class UnitOfWork:
     """
     Unit of Work pattern implementation.
+
     Manages database transactions and provides access to repositories.
+    Transaction lifecycle (commit/rollback) is managed by the dependency injection layer.
     """
 
     def __init__(self, session: AsyncSession):
@@ -30,6 +32,14 @@ class UnitOfWork:
         if self._approvers is None:
             self._approvers = ApproverRepository(self.session)
         return self._approvers
+
+    async def flush(self) -> None:
+        """Flush pending changes to the database without committing."""
+        await self.session.flush()
+
+    async def refresh(self, instance: object, attribute_names: Sequence[str]) -> None:
+        """Refresh an instance from the database, loading specified attributes."""
+        await self.session.refresh(instance, attribute_names)
 
     async def commit(self) -> None:
         """Commit the current transaction."""

@@ -1,4 +1,4 @@
-"""FastAPI dependencies."""
+"""FastAPI dependencies for dependency injection."""
 
 from typing import AsyncGenerator
 
@@ -14,7 +14,8 @@ async def get_uow(
     """
     Dependency to get a Unit of Work instance.
 
-    This ensures proper transaction management and automatic rollback on errors.
+    Transaction lifecycle is managed by the service layer via context manager.
+    This dependency only provides and cleans up the UoW.
     """
     uow = UnitOfWork(session)
     try:
