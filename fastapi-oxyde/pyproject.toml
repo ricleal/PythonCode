@@ -1,0 +1,11 @@
+[project]
+name = "fastapi-oxyde"
+version = "0.1.0"
+description = "FastAPI + Oxyde ORM CRUD example with Books and Authors"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.115",
+    "oxyde>=0.5",
+    "uvicorn[standard]>=0.30",
+]
