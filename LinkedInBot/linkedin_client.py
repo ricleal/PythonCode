@@ -18,9 +18,32 @@ class LinkedInClient:
     Wraps the official LinkedIn API client library with a simpler interface.
     """
 
-    API_VERSION = "202506"
+    API_VERSION = "202606"
     POSTS_RESOURCE = "/posts"
     USERINFO_RESOURCE = "/userinfo"
+
+    # Characters reserved by LinkedIn's "little text" format that MUST be
+    # escaped with a backslash, otherwise the parser stops at the first
+    # unescaped occurrence and the post appears truncated on LinkedIn.
+    _LITTLE_TEXT_RESERVED = str.maketrans(
+        {
+            "\\": "\\\\",
+            '"': '\\"',
+            "{": "\\{",
+            "}": "\\}",
+            "@": "\\@",
+            "[": "\\[",
+            "]": "\\]",
+            "(": "\\(",
+            ")": "\\)",
+            "<": "\\<",
+            ">": "\\>",
+            "#": "\\#",
+            "*": "\\*",
+            "_": "\\_",
+            "~": "\\~",
+        }
+    )
 
     def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
         self.client_id = client_id
@@ -140,6 +163,24 @@ class LinkedInClient:
         )
         return response.entity
 
+    @staticmethod
+    def escape_little_text(text: str) -> str:
+        """Escape characters reserved by LinkedIn's 'little text' format.
+
+        The Posts API uses the 'little text' format where certain characters
+        (``\\``, ``"``, ``{}``, ``@``, ``[]``, ``()``, ``<>``, ``#``, ``*``,
+        ``_``, ``~``) are reserved for syntax elements. If they appear in
+        plain text without a backslash escape, LinkedIn's parser stops at the
+        first unescaped occurrence, causing the post to appear truncated.
+
+        Args:
+            text: The raw post content (may contain unescaped special chars).
+
+        Returns:
+            The text with all reserved characters properly backslash-escaped.
+        """
+        return text.translate(LinkedInClient._LITTLE_TEXT_RESERVED)
+
     def set_access_token(self, token: str) -> None:
         """Set an existing access token (e.g., loaded from the database)."""
         self.access_token = token
@@ -175,6 +216,11 @@ class LinkedInClient:
                     "Could not retrieve LinkedIn person ID from user info."
                 )
 
+        # Escape LinkedIn "little text" reserved characters so the parser
+        # doesn't stop at the first unescaped special character, which would
+        # cause the post to appear truncated on LinkedIn.
+        safe_text = self.escape_little_text(text)
+
         # Use the /posts endpoint with the versioned API.
         # The RestliClient does NOT raise on HTTP errors, so we check status manually.
         response = self._restli_client.create(
@@ -183,7 +229,7 @@ class LinkedInClient:
                 "author": f"urn:li:person:{self.person_id}",
                 "lifecycleState": "PUBLISHED",
                 "visibility": "PUBLIC",
-                "commentary": text,
+                "commentary": safe_text,
                 "distribution": {
                     "feedDistribution": "MAIN_FEED",
                     "targetEntities": [],

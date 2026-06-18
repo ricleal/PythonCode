@@ -72,7 +72,7 @@ def generate_post(subject: str) -> str | None:
         f"tech-savvy audience of software engineers and developers. "
         f"Use a natural, conversational tone. "
         f"Keep the post under {MAX_POST_LENGTH} characters. "
-        f"Do NOT use hashtags unless they are naturally part of the content. "
+        # f"Do NOT use hashtags unless they are naturally part of the content. "
         f"The post should feel authentic, not like marketing."
     )
 
