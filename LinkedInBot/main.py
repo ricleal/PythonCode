@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 import db
+from image_provider import ImageProvider
 from linkedin_client import LinkedInClient
 
 # ── Configuration ──────────────────────────────────────────────────────────
@@ -33,6 +34,7 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 MAX_POST_LENGTH = int(os.getenv("MAX_POST_LENGTH", "3000"))
 POST_LANGUAGE = os.getenv("POST_LANGUAGE", "en")
+UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 DB_PATH = os.getenv("DB_PATH", "posts.db")
 
 BASE_DIR = Path(__file__).parent
@@ -185,7 +187,7 @@ def handle_linkedin_auth() -> LinkedInClient | None:
 # ── Auto Mode (cron-friendly) ──────────────────────────────────────────────
 
 
-def run_auto() -> None:
+def run_auto(draft_mode: bool = False) -> None:
     """Automated mode: generate a post and publish without any prompts.
 
     Designed to be called from cron. Exits with code 0 on success, 1 on error.
@@ -236,14 +238,31 @@ def run_auto() -> None:
         print("❌ Failed to generate post.", flush=True)
         sys.exit(1)
 
-    # Save to database
-    post_id = db.save_post(DB_PATH_ABS, subject, generated_text)
+    # Fetch an image from Unsplash
+    print("⏳ Finding an image...", flush=True)
+    image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
+    local_image_path, image_url = image_provider.fetch_image(subject)
+
+    # Save to database (with image URL)
+    post_id = db.save_post(DB_PATH_ABS, subject, generated_text, image_url=image_url)
 
     print("⏳ Posting to LinkedIn...", flush=True)
     try:
-        linkedin_client.create_post(generated_text)
-        db.update_post_status(DB_PATH_ABS, post_id, "posted")
-        print(f"✅ Posted successfully! (post #{post_id}) — {subject[:60]}", flush=True)
+        image_urn = None
+        if local_image_path:
+            print("   ⏳ Uploading image to LinkedIn...", flush=True)
+            image_urn = linkedin_client.upload_image(local_image_path)
+            image_provider.cleanup(local_image_path)
+
+        lifecycle = "DRAFT" if draft_mode else "PUBLISHED"
+        result = linkedin_client.create_post(
+            generated_text, image_urn=image_urn, lifecycle_state=lifecycle
+        )
+        label = "draft" if draft_mode else "published"
+        status = "draft" if draft_mode else "posted"
+        db.update_post_status(DB_PATH_ABS, post_id, status)
+        print(f"✅ Posted as {label}! (post #{post_id}) — {subject[:60]}", flush=True)
+        print(f"   🔗 {result['post_url']}", flush=True)
     except Exception as e:
         print(f"❌ Failed to post to LinkedIn: {e}", flush=True)
         db.update_post_status(DB_PATH_ABS, post_id, "draft")
@@ -253,7 +272,7 @@ def run_auto() -> None:
 # ── Main (Interactive) ─────────────────────────────────────────────────────
 
 
-def main() -> None:
+def main(draft_mode: bool = False) -> None:
     print("\n" + "═" * 60)
     print("   🚀  LinkedIn Bot — AI-Powered Post Generator")
     print("═" * 60)
@@ -345,8 +364,17 @@ def main() -> None:
             else:
                 break
 
-        # Save to database
-        last_post_id = db.save_post(DB_PATH_ABS, current_subject, generated_text)
+        # Fetch an image from Unsplash
+        print("\n⏳ Finding an image...")
+        image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
+        local_image_path, image_url = image_provider.fetch_image(current_subject)
+        if image_url:
+            print(f"   🖼️  Image selected from Unsplash")
+
+        # Save to database (with image URL)
+        last_post_id = db.save_post(
+            DB_PATH_ABS, current_subject, generated_text, image_url=image_url
+        )
         print(f"\n💾 Post saved to database (ID: {last_post_id})")
 
         # Show the generated text
@@ -356,6 +384,8 @@ def main() -> None:
         print(generated_text)
         print(f"\n{'─' * 60}")
         print(f"   📊 Characters: {len(generated_text)}  |  Subject: {current_subject}")
+        if image_url:
+            print(f"   🖼️  Image: {image_url}")
         print(f"{'─' * 60}")
 
         # Show menu
@@ -370,11 +400,33 @@ def main() -> None:
                     )
                     continue
 
-                print("\n⏳ Posting to LinkedIn...")
+                image_urn = None
+                if local_image_path:
+                    print("   ⏳ Uploading image to LinkedIn...")
+                    try:
+                        image_urn = linkedin_client.upload_image(local_image_path)
+                        print("   ✅ Image uploaded successfully.")
+                    except Exception as e:
+                        print(f"   ⚠️  Image upload failed: {e}")
+                        print("   Proceeding without image.")
+                    finally:
+                        image_provider.cleanup(local_image_path)
+
+                lifecycle = "DRAFT" if draft_mode else "PUBLISHED"
+                label = "draft" if draft_mode else "post"
+                print(f"\n⏳ Posting as {label} to LinkedIn...")
                 try:
-                    linkedin_client.create_post(generated_text)
-                    db.update_post_status(DB_PATH_ABS, last_post_id, "posted")
-                    print("\n✅  POSTED SUCCESSFULLY TO LINKEDIN! 🎉")
+                    result = linkedin_client.create_post(
+                        generated_text, image_urn=image_urn, lifecycle_state=lifecycle
+                    )
+                    if draft_mode:
+                        db.update_post_status(DB_PATH_ABS, last_post_id, "draft")
+                        print("\n📝  SAVED AS DRAFT ON LINKEDIN! Only you can see it.")
+                        print(f"   🔗 {result['post_url']}")
+                    else:
+                        db.update_post_status(DB_PATH_ABS, last_post_id, "posted")
+                        print("\n✅  POSTED SUCCESSFULLY TO LINKEDIN! 🎉")
+                        print(f"   🔗 {result['post_url']}")
                 except Exception as e:
                     print(f"\n❌ Failed to post to LinkedIn: {e}")
                     print("   The post is saved as a draft in the database.")
@@ -384,15 +436,18 @@ def main() -> None:
                 break
 
             elif choice == "r":
+                image_provider.cleanup(local_image_path)
                 db.update_post_status(DB_PATH_ABS, last_post_id, "regenerated")
                 break  # Break inner loop to regenerate
 
             elif choice == "n":
+                image_provider.cleanup(local_image_path)
                 db.update_post_status(DB_PATH_ABS, last_post_id, "discarded")
                 current_subject = pick_random_subject(subjects)
                 break  # Break inner loop to start new subject
 
             elif choice == "s":
+                image_provider.cleanup(local_image_path)
                 db.update_post_status(DB_PATH_ABS, last_post_id, "draft")
                 print("\n📄 Post saved as draft in database.")
                 # Ask if user wants to continue with another subject
@@ -405,6 +460,7 @@ def main() -> None:
                     return
 
             elif choice == "a":
+                image_provider.cleanup(local_image_path)
                 db.update_post_status(DB_PATH_ABS, last_post_id, "discarded")
                 print("\n👋 Aborted. Goodbye!")
                 return
@@ -433,9 +489,18 @@ if __name__ == "__main__":
         action="store_true",
         help="Automated mode: generate, post to LinkedIn, then exit. Suitable for cron.",
     )
+    parser.add_argument(
+        "--draft",
+        action="store_true",
+        help="Post as a draft (only you can see it). Useful for testing.",
+    )
     args = parser.parse_args()
 
     if args.auto:
-        run_auto()
+        if args.draft:
+            print("\n📝 Draft mode enabled — posts will only be visible to you.\n")
+        run_auto(draft_mode=args.draft)
     else:
-        main()
+        if args.draft:
+            print("\n📝 Draft mode enabled — posts will only be visible to you.\n")
+        main(draft_mode=args.draft)

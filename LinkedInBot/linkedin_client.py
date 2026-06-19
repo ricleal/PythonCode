@@ -7,7 +7,9 @@ import threading
 import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
+import requests
 from linkedin_api.clients.auth.client import AuthClient
 from linkedin_api.clients.restli.client import RestliClient
 
@@ -21,6 +23,7 @@ class LinkedInClient:
     API_VERSION = "202606"
     POSTS_RESOURCE = "/posts"
     USERINFO_RESOURCE = "/userinfo"
+    IMAGES_RESOURCE = "/images"
 
     # Characters reserved by LinkedIn's "little text" format that MUST be
     # escaped with a backslash, otherwise the parser stops at the first
@@ -192,7 +195,83 @@ class LinkedInClient:
                 "Not authenticated. Call authenticate() or set_access_token() first."
             )
 
-    def create_post(self, text: str) -> object:
+    def upload_image(self, image_path: str | Path) -> str:
+        """Upload an image to LinkedIn and return its image URN.
+
+        Uses the LinkedIn Images API (action: initializeUpload) to get an
+        upload URL, then PUTs the image binary data to that URL.
+
+        Args:
+            image_path: Path to the local image file to upload.
+
+        Returns:
+            The image URN (e.g. ``urn:li:image:C...``) to use in a post.
+        """
+        self._ensure_authenticated()
+
+        # Get the person ID if we don't have it yet
+        if not self.person_id:
+            user_info = self.get_user_info()
+            self.person_id = user_info.get("sub")
+            if not self.person_id:
+                raise RuntimeError(
+                    "Could not retrieve LinkedIn person ID from user info."
+                )
+
+        # Step 1: Register the image upload
+        response = self._restli_client.action(
+            resource_path=self.IMAGES_RESOURCE,
+            action_name="initializeUpload",
+            action_params={
+                "initializeUploadRequest": {
+                    "owner": f"urn:li:person:{self.person_id}",
+                }
+            },
+            version_string=self.API_VERSION,
+            access_token=self.access_token,
+        )
+
+        if response.status_code not in (200, 201):
+            msg = f"HTTP {response.status_code}"
+            raise RuntimeError(
+                f"LinkedIn image upload init failed (status {response.status_code}): {msg}"
+            )
+
+        value = response.value or {}
+        upload_url = value.get("uploadUrl")
+        image_urn = value.get("image")
+
+        if not upload_url or not image_urn:
+            raise RuntimeError("LinkedIn did not return an upload URL or image URN.")
+
+        # Step 2: Upload the image binary
+        with open(image_path, "rb") as f:
+            image_data = f.read()
+
+        upload_response = requests.put(
+            upload_url,
+            data=image_data,
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Authorization": f"Bearer {self.access_token}",
+            },
+            timeout=30,
+        )
+
+        if upload_response.status_code not in (200, 201):
+            raise RuntimeError(
+                f"LinkedIn image binary upload failed "
+                f"(status {upload_response.status_code})"
+            )
+
+        return image_urn
+
+    def create_post(
+        self,
+        text: str,
+        image_urn: str | None = None,
+        lifecycle_state: str = "PUBLISHED",
+    ) -> dict:
         """Create a post on LinkedIn using the official RestliClient.
 
         Uses the versioned /posts endpoint with the official client library,
@@ -201,9 +280,14 @@ class LinkedInClient:
 
         Args:
             text: The post content/commentary.
+            image_urn: Optional image URN to attach to the post
+                       (from ``upload_image()``).
+            lifecycle_state: ``PUBLISHED`` (visible to everyone) or ``DRAFT``
+                             (only the author can see it).
 
         Returns:
-            The CreateResponse from the LinkedIn API client.
+            A dict with ``post_id`` (the LinkedIn share URN),
+            ``post_url`` (a link to view the post), and ``status_code``.
         """
         self._ensure_authenticated()
 
@@ -221,22 +305,34 @@ class LinkedInClient:
         # cause the post to appear truncated on LinkedIn.
         safe_text = self.escape_little_text(text)
 
+        # Build the post entity
+        entity: dict = {
+            "author": f"urn:li:person:{self.person_id}",
+            "lifecycleState": lifecycle_state,
+            "visibility": "PUBLIC",
+            "commentary": safe_text,
+            "distribution": {
+                "feedDistribution": "MAIN_FEED",
+                "targetEntities": [],
+                "thirdPartyDistributionChannels": [],
+            },
+            "isReshareDisabledByAuthor": False,
+        }
+
+        # Attach image if provided
+        if image_urn:
+            entity["content"] = {
+                "media": {
+                    "title": "Post image",
+                    "id": image_urn,
+                }
+            }
+
         # Use the /posts endpoint with the versioned API.
         # The RestliClient does NOT raise on HTTP errors, so we check status manually.
         response = self._restli_client.create(
             resource_path=self.POSTS_RESOURCE,
-            entity={
-                "author": f"urn:li:person:{self.person_id}",
-                "lifecycleState": "PUBLISHED",
-                "visibility": "PUBLIC",
-                "commentary": safe_text,
-                "distribution": {
-                    "feedDistribution": "MAIN_FEED",
-                    "targetEntities": [],
-                    "thirdPartyDistributionChannels": [],
-                },
-                "isReshareDisabledByAuthor": False,
-            },
+            entity=entity,
             version_string=self.API_VERSION,
             access_token=self.access_token,
         )
@@ -244,10 +340,22 @@ class LinkedInClient:
         # The RestliClient does not raise on HTTP errors — it wraps the response.
         # Check the status code explicitly and raise if the post wasn't created.
         if response.status_code != 201:
-            error_detail = response.entity or {}
-            msg = error_detail.get("message", f"HTTP {response.status_code}")
+            # Try to extract error info from the raw response
+            error_body = ""
+            try:
+                error_body = response.response.text[:500]
+            except Exception:
+                pass
             raise RuntimeError(
-                f"LinkedIn API error (status {response.status_code}): {msg}"
+                f"LinkedIn API error (status {response.status_code}): {error_body}"
             )
 
-        return response
+        post_id = response.decoded_entity_id or response.entity_id or ""
+        # Construct a URL the user can visit
+        post_url = f"https://www.linkedin.com/feed/update/{post_id}"
+
+        return {
+            "post_id": post_id,
+            "post_url": post_url,
+            "status_code": response.status_code,
+        }

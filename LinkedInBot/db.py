@@ -23,10 +23,17 @@ def init_db(db_path: str) -> None:
             subject TEXT NOT NULL,
             generated_text TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'generated',
+            image_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             posted_at TIMESTAMP
         )
     """)
+
+    # Migration: add image_url column to existing posts tables
+    try:
+        cursor.execute("ALTER TABLE posts ADD COLUMN image_url TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS linkedin_tokens (
@@ -43,14 +50,18 @@ def init_db(db_path: str) -> None:
 
 
 def save_post(
-    db_path: str, subject: str, generated_text: str, status: str = "generated"
+    db_path: str,
+    subject: str,
+    generated_text: str,
+    status: str = "generated",
+    image_url: str | None = None,
 ) -> int:
     """Save a generated post to the database. Returns the post ID."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO posts (subject, generated_text, status) VALUES (?, ?, ?)",
-        (subject, generated_text, status),
+        "INSERT INTO posts (subject, generated_text, status, image_url) VALUES (?, ?, ?, ?)",
+        (subject, generated_text, status, image_url),
     )
     conn.commit()
     post_id = cursor.lastrowid
@@ -74,6 +85,18 @@ def update_post_status(db_path: str, post_id: int, status: str) -> None:
             (status, post_id),
         )
 
+    conn.commit()
+    conn.close()
+
+
+def update_post_image(db_path: str, post_id: int, image_url: str) -> None:
+    """Update the image_url for a post."""
+    conn = get_connection(db_path)
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE posts SET image_url = ? WHERE id = ?",
+        (image_url, post_id),
+    )
     conn.commit()
     conn.close()
 
@@ -111,7 +134,7 @@ def get_post_history(db_path: str, limit: int = 10) -> list[dict]:
     conn = get_connection(db_path)
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT id, subject, status, created_at, posted_at FROM posts ORDER BY created_at DESC LIMIT ?",
+        "SELECT id, subject, status, image_url, created_at, posted_at FROM posts ORDER BY created_at DESC LIMIT ?",
         (limit,),
     )
     rows = cursor.fetchall()
