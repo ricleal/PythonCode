@@ -29,12 +29,6 @@ def init_db(db_path: str) -> None:
         )
     """)
 
-    # Migration: add image_url column to existing posts tables
-    try:
-        cursor.execute("ALTER TABLE posts ADD COLUMN image_url TEXT")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
-
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS linkedin_tokens (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

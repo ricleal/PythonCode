@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 import db
+from converter import convert, escape_linkedin
 from image_provider import ImageProvider
 from linkedin_client import LinkedInClient
 
@@ -76,6 +77,11 @@ def generate_post(subject: str) -> str | None:
         f"Keep the post under {MAX_POST_LENGTH} characters. "
         # f"Do NOT use hashtags unless they are naturally part of the content. "
         f"The post should feel authentic, not like marketing."
+        f"CRITICAL: Output ONLY the post content itself. "
+        f"Do NOT include any introductory phrases, meta-commentary, disclaimers, "
+        f"or descriptions such as 'Here is a LinkedIn post...' or 'I hope this helps...'. "
+        f"Do NOT wrap the post in quotes or code blocks. "
+        f"Start directly with the post text."
     )
 
     user_prompt = (
@@ -237,7 +243,10 @@ def run_auto(draft_mode: bool = False) -> None:
     if not generated_text:
         print("❌ Failed to generate post.", flush=True)
         sys.exit(1)
-
+    # Convert Markdown formatting to Unicode for LinkedIn compatibility.
+    # LinkedIn-reserved chars in regular text are escaped with backslash.
+    print("🔄 Converting Markdown to Unicode...", flush=True)
+    generated_text = convert(generated_text)
     # Fetch an image from Unsplash
     print("⏳ Finding an image...", flush=True)
     image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
@@ -364,12 +373,17 @@ def main(draft_mode: bool = False) -> None:
             else:
                 break
 
+        # Convert Markdown formatting to Unicode, then escape LinkedIn-reserved
+        # chars so the post doesn't get truncated on LinkedIn.
+        print("🔄 Converting Markdown to Unicode...")
+        generated_text = escape_linkedin(convert(generated_text))
+
         # Fetch an image from Unsplash
         print("\n⏳ Finding an image...")
         image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
         local_image_path, image_url = image_provider.fetch_image(current_subject)
         if image_url:
-            print(f"   🖼️  Image selected from Unsplash")
+            print("   🖼️  Image selected from Unsplash")
 
         # Save to database (with image URL)
         last_post_id = db.save_post(

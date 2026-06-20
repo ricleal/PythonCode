@@ -25,28 +25,9 @@ class LinkedInClient:
     USERINFO_RESOURCE = "/userinfo"
     IMAGES_RESOURCE = "/images"
 
-    # Characters reserved by LinkedIn's "little text" format that MUST be
-    # escaped with a backslash, otherwise the parser stops at the first
-    # unescaped occurrence and the post appears truncated on LinkedIn.
-    _LITTLE_TEXT_RESERVED = str.maketrans(
-        {
-            "\\": "\\\\",
-            '"': '\\"',
-            "{": "\\{",
-            "}": "\\}",
-            "@": "\\@",
-            "[": "\\[",
-            "]": "\\]",
-            "(": "\\(",
-            ")": "\\)",
-            "<": "\\<",
-            ">": "\\>",
-            "#": "\\#",
-            "*": "\\*",
-            "_": "\\_",
-            "~": "\\~",
-        }
-    )
+    # NOTE: LinkedIn "little text" reserved chars are escaped by
+    # converter.escape_linkedin() *before* text reaches create_post,
+    # so no escaping is needed here.
 
     def __init__(self, client_id: str, client_secret: str, redirect_uri: str):
         self.client_id = client_id
@@ -166,24 +147,6 @@ class LinkedInClient:
         )
         return response.entity
 
-    @staticmethod
-    def escape_little_text(text: str) -> str:
-        """Escape characters reserved by LinkedIn's 'little text' format.
-
-        The Posts API uses the 'little text' format where certain characters
-        (``\\``, ``"``, ``{}``, ``@``, ``[]``, ``()``, ``<>``, ``#``, ``*``,
-        ``_``, ``~``) are reserved for syntax elements. If they appear in
-        plain text without a backslash escape, LinkedIn's parser stops at the
-        first unescaped occurrence, causing the post to appear truncated.
-
-        Args:
-            text: The raw post content (may contain unescaped special chars).
-
-        Returns:
-            The text with all reserved characters properly backslash-escaped.
-        """
-        return text.translate(LinkedInClient._LITTLE_TEXT_RESERVED)
-
     def set_access_token(self, token: str) -> None:
         """Set an existing access token (e.g., loaded from the database)."""
         self.access_token = token
@@ -300,17 +263,14 @@ class LinkedInClient:
                     "Could not retrieve LinkedIn person ID from user info."
                 )
 
-        # Escape LinkedIn "little text" reserved characters so the parser
-        # doesn't stop at the first unescaped special character, which would
-        # cause the post to appear truncated on LinkedIn.
-        safe_text = self.escape_little_text(text)
-
-        # Build the post entity
+        # Build the post entity.
+        # Markdown has already been converted to Unicode by converter.py,
+        # so LinkedIn's "little text" reserved chars are already safe.
         entity: dict = {
             "author": f"urn:li:person:{self.person_id}",
             "lifecycleState": lifecycle_state,
             "visibility": "PUBLIC",
-            "commentary": safe_text,
+            "commentary": text,
             "distribution": {
                 "feedDistribution": "MAIN_FEED",
                 "targetEntities": [],
