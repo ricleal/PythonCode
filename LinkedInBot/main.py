@@ -239,21 +239,21 @@ def run_auto(draft_mode: bool = False) -> None:
     print(f"📌 Subject: {subject}", flush=True)
 
     print("⏳ Generating post with DeepSeek...", flush=True)
-    generated_text = generate_post(subject)
-    if not generated_text:
+    raw_text = generate_post(subject)
+    if not raw_text:
         print("❌ Failed to generate post.", flush=True)
         sys.exit(1)
-    # Convert Markdown formatting to Unicode for LinkedIn compatibility.
-    # LinkedIn-reserved chars in regular text are escaped with backslash.
+    # Convert Markdown formatting to Unicode for LinkedIn compatibility, then
+    # escape LinkedIn-reserved chars so the post doesn't get truncated.
     print("🔄 Converting Markdown to Unicode...", flush=True)
-    generated_text = convert(generated_text)
+    generated_text = escape_linkedin(convert(raw_text))
     # Fetch an image from Unsplash
     print("⏳ Finding an image...", flush=True)
     image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
     local_image_path, image_url = image_provider.fetch_image(subject)
 
-    # Save to database (with image URL)
-    post_id = db.save_post(DB_PATH_ABS, subject, generated_text, image_url=image_url)
+    # Save to database (with image URL and raw markdown)
+    post_id = db.save_post(DB_PATH_ABS, subject, generated_text, image_url=image_url, generated_raw_text=raw_text)
 
     print("⏳ Posting to LinkedIn...", flush=True)
     try:
@@ -358,9 +358,9 @@ def main(draft_mode: bool = False) -> None:
         print(f"{'─' * 60}")
 
         print("\n⏳ Generating post with DeepSeek...")
-        generated_text = generate_post(current_subject)
+        raw_text = generate_post(current_subject)
 
-        if not generated_text:
+        if not raw_text:
             print(
                 "\n❌ Failed to generate post. Try a different subject or check your API key."
             )
@@ -376,7 +376,7 @@ def main(draft_mode: bool = False) -> None:
         # Convert Markdown formatting to Unicode, then escape LinkedIn-reserved
         # chars so the post doesn't get truncated on LinkedIn.
         print("🔄 Converting Markdown to Unicode...")
-        generated_text = escape_linkedin(convert(generated_text))
+        generated_text = escape_linkedin(convert(raw_text))
 
         # Fetch an image from Unsplash
         print("\n⏳ Finding an image...")
@@ -385,9 +385,9 @@ def main(draft_mode: bool = False) -> None:
         if image_url:
             print("   🖼️  Image selected from Unsplash")
 
-        # Save to database (with image URL)
+        # Save to database (with image URL and raw markdown)
         last_post_id = db.save_post(
-            DB_PATH_ABS, current_subject, generated_text, image_url=image_url
+            DB_PATH_ABS, current_subject, generated_text, image_url=image_url, generated_raw_text=raw_text
         )
         print(f"\n💾 Post saved to database (ID: {last_post_id})")
 

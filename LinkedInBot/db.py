@@ -22,6 +22,7 @@ def init_db(db_path: str) -> None:
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             subject TEXT NOT NULL,
             generated_text TEXT NOT NULL,
+            generated_raw_text TEXT,
             status TEXT NOT NULL DEFAULT 'generated',
             image_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -49,13 +50,14 @@ def save_post(
     generated_text: str,
     status: str = "generated",
     image_url: str | None = None,
+    generated_raw_text: str | None = None,
 ) -> int:
     """Save a generated post to the database. Returns the post ID."""
     conn = get_connection(db_path)
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO posts (subject, generated_text, status, image_url) VALUES (?, ?, ?, ?)",
-        (subject, generated_text, status, image_url),
+        "INSERT INTO posts (subject, generated_text, generated_raw_text, status, image_url) VALUES (?, ?, ?, ?, ?)",
+        (subject, generated_text, generated_raw_text, status, image_url),
     )
     conn.commit()
     post_id = cursor.lastrowid
