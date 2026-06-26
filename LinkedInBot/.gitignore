@@ -26,5 +26,5 @@ __pycache__/
 # uv
 uv.lock
 
-posts.db
+!.env.template
 
