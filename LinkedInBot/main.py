@@ -2,17 +2,21 @@
 """LinkedIn Bot — Generate posts with DeepSeek and publish to LinkedIn.
 
 Usage:
-  python main.py              Interactive mode (menu-driven)
-  python main.py --auto       Automated mode — picks a subject, generates,
-                              posts to LinkedIn, and exits. Suitable for cron.
+  python main.py generate     Generate a post and save as draft
+  python main.py post         Generate and publish to LinkedIn
+  python main.py auth         Authenticate with LinkedIn
+  python main.py history      Show post history
+  python main.py subjects     List available subjects
 """
 
-import argparse
+import logging
 import os
 import random
 import sys
 from pathlib import Path
+from typing import Optional
 
+import typer
 import yaml
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -37,10 +41,29 @@ MAX_POST_LENGTH = int(os.getenv("MAX_POST_LENGTH", "3000"))
 POST_LANGUAGE = os.getenv("POST_LANGUAGE", "en")
 UNSPLASH_ACCESS_KEY = os.getenv("UNSPLASH_ACCESS_KEY", "")
 DB_PATH = os.getenv("DB_PATH", "posts.db")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 
 BASE_DIR = Path(__file__).parent
 SUBJECTS_FILE = BASE_DIR / "subjects.yaml"
 DB_PATH_ABS = BASE_DIR / DB_PATH
+
+# ── Logging ────────────────────────────────────────────────────────────────
+
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+
+# ── Typer App ──────────────────────────────────────────────────────────────
+
+app = typer.Typer(
+    name="linkedinbot",
+    help="LinkedIn Bot — AI-powered post generator using DeepSeek",
+    add_completion=False,
+)
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -49,7 +72,7 @@ DB_PATH_ABS = BASE_DIR / DB_PATH
 def load_subjects() -> list[str]:
     """Load the list of subjects from the YAML file."""
     if not SUBJECTS_FILE.exists():
-        print(f"❌ Subjects file not found: {SUBJECTS_FILE}")
+        logger.error("Subjects file not found: %s", SUBJECTS_FILE)
         sys.exit(1)
     with open(SUBJECTS_FILE, "r") as f:
         data = yaml.safe_load(f)
@@ -61,21 +84,27 @@ def pick_random_subject(subjects: list[str]) -> str:
     return random.choice(subjects)
 
 
-def generate_post(subject: str) -> str | None:
+def generate_post(subject: str, language: str = "", max_length: int = 0) -> str | None:
     """Generate a LinkedIn post using the DeepSeek API.
+
+    Args:
+        subject: The topic to write about.
+        language: Override language (defaults to POST_LANGUAGE env var).
+        max_length: Override max character length (defaults to MAX_POST_LENGTH env var).
 
     Returns the generated text, or None if generation failed.
     """
+    lang = language or POST_LANGUAGE
+    length = max_length or MAX_POST_LENGTH
     client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com/v1")
 
     system_prompt = (
         f"You are an expert LinkedIn content creator. "
-        f"Write engaging, professional LinkedIn posts in {POST_LANGUAGE}. "
+        f"Write engaging, professional LinkedIn posts in {lang}. "
         f"The post should be insightful, well-structured, and suitable for a "
         f"tech-savvy audience of software engineers and developers. "
         f"Use a natural, conversational tone. "
-        f"Keep the post under {MAX_POST_LENGTH} characters. "
-        # f"Do NOT use hashtags unless they are naturally part of the content. "
+        f"Keep the post under {length} characters. "
         f"The post should feel authentic, not like marketing."
         f"CRITICAL: Output ONLY the post content itself. "
         f"Do NOT include any introductory phrases, meta-commentary, disclaimers, "
@@ -92,6 +121,12 @@ def generate_post(subject: str) -> str | None:
         f"and provide value to other software engineers."
     )
 
+    logger.info(
+        "Calling DeepSeek API (model=%s, max_tokens=%d, lang=%s)...",
+        DEEPSEEK_MODEL,
+        min(length, 4096),
+        lang,
+    )
     try:
         response = client.chat.completions.create(
             model=DEEPSEEK_MODEL,
@@ -99,59 +134,24 @@ def generate_post(subject: str) -> str | None:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            max_tokens=min(MAX_POST_LENGTH, 4096),
+            max_tokens=min(length, 4096),
             temperature=0.8,
         )
         content = response.choices[0].message.content
         if content:
-            return content.strip()
+            content = content.strip()
+            logger.info("DeepSeek API response received (%d characters).", len(content))
+            return content
+        logger.warning("DeepSeek API returned empty content.")
         return None
     except Exception as e:
-        print(f"\n❌ Error generating post with DeepSeek: {e}")
+        logger.error("DeepSeek API call failed: %s", e)
+        typer.secho(
+            f"\n❌ Error generating post with DeepSeek: {e}",
+            fg=typer.colors.RED,
+            err=True,
+        )
         return None
-
-
-def show_menu() -> str:
-    """Display the interactive menu and return the user's choice."""
-    print("\n" + "─" * 60)
-    print("What would you like to do?")
-    print("  [p]  Post it to LinkedIn")
-    print("  [r]  Regenerate (generate again with same subject)")
-    print("  [n]  New subject (pick a different topic)")
-    print("  [s]  Skip / Save as draft (don't post)")
-    print("  [a]  Abort (discard and exit)")
-    print("  [h]  Show post history")
-    print("─" * 60)
-
-    while True:
-        choice = input("→ Your choice: ").strip().lower()
-        if choice in ("p", "r", "n", "s", "a", "h"):
-            return choice
-        print("  Invalid choice. Please enter p, r, n, s, a, or h.")
-
-
-def show_post_history() -> None:
-    """Display recent post history from the database."""
-    posts = db.get_post_history(DB_PATH_ABS, limit=10)
-    if not posts:
-        print("\n📭 No posts in history yet.")
-        return
-
-    print("\n" + "─" * 60)
-    print("📋  RECENT POST HISTORY")
-    print("─" * 60)
-    for post in posts:
-        status_icon = {
-            "posted": "✅",
-            "generated": "📝",
-            "discarded": "🗑️",
-            "draft": "📄",
-        }.get(post["status"], "❓")
-        created = post["created_at"][:19] if post["created_at"] else "?"
-        posted = f" | posted: {post['posted_at'][:19]}" if post.get("posted_at") else ""
-        print(f"  {status_icon}  #{post['id']} — {post['subject'][:60]}")
-        print(f"     {created}{posted} | status: {post['status']}")
-    print("─" * 60)
 
 
 def handle_linkedin_auth() -> LinkedInClient | None:
@@ -165,356 +165,432 @@ def handle_linkedin_auth() -> LinkedInClient | None:
     # Check if we already have a stored token
     stored_token = db.get_linkedin_token(DB_PATH_ABS)
     if stored_token and stored_token.get("access_token"):
-        print("\n🔑 Using stored LinkedIn access token.")
+        logger.info("Using stored LinkedIn access token.")
         client.set_access_token(stored_token["access_token"])
         try:
             # Verify the token is still valid
             user_info = client.get_user_info()
-            print(f"   👤 Authenticated as: {user_info.get('name', 'Unknown')}")
+            logger.info("Authenticated as: %s", user_info.get("name", "Unknown"))
             return client
         except Exception:
-            print("   ⚠️  Stored token expired or invalid. Re-authenticating...")
+            logger.warning("Stored token expired or invalid. Re-authenticating...")
 
     # Run OAuth flow
-    print("\n🔐 Need to authenticate with LinkedIn...")
+    logger.info("Need to authenticate with LinkedIn...")
     try:
         client.authenticate()
         user_info = client.get_user_info()
-        print(f"\n   ✅ Authenticated as: {user_info.get('name', 'Unknown')}")
+        logger.info("Authenticated as: %s", user_info.get("name", "Unknown"))
         # Store the token
         db.save_linkedin_token(DB_PATH_ABS, client.access_token)
         return client
     except Exception as e:
-        print(f"\n❌ LinkedIn authentication failed: {e}")
-        print("   You can still generate posts and save them as drafts.")
+        logger.error("LinkedIn authentication failed: %s", e)
+        logger.warning("You can still generate posts and save them as drafts.")
         return None
 
 
-# ── Auto Mode (cron-friendly) ──────────────────────────────────────────────
+# ── Commands ───────────────────────────────────────────────────────────────
 
 
-def run_auto(draft_mode: bool = False) -> None:
-    """Automated mode: generate a post and publish without any prompts.
+@app.command()
+def generate(
+    subject: Optional[str] = typer.Option(
+        None,
+        "--subject",
+        "-s",
+        help="Subject to write about. Random if omitted.",
+    ),
+    language: Optional[str] = typer.Option(
+        None,
+        "--language",
+        "-l",
+        help=f"Post language (default: {POST_LANGUAGE})",
+    ),
+    max_length: Optional[int] = typer.Option(
+        None,
+        "--max-length",
+        "-m",
+        help=f"Max post length in characters (default: {MAX_POST_LENGTH})",
+    ),
+):
+    """Generate a LinkedIn post and save it as a draft."""
+    logger.info("=== Command: generate ===")
 
-    Designed to be called from cron. Exits with code 0 on success, 1 on error.
-    """
-    # Validate configuration
     if not DEEPSEEK_API_KEY:
-        print("❌ DEEPSEEK_API_KEY is not set in .env file.", flush=True)
-        sys.exit(1)
+        logger.error("DEEPSEEK_API_KEY is not set in .env file.")
+        typer.secho(
+            "❌ DEEPSEEK_API_KEY is not set in .env file.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
 
-    if not LINKEDIN_CLIENT_ID or not LINKEDIN_CLIENT_SECRET:
-        print("❌ LinkedIn credentials are not configured in .env file.", flush=True)
-        sys.exit(1)
-
-    # Initialize database
+    logger.info("Initializing database...")
     db.init_db(DB_PATH_ABS)
 
-    # Load subjects and pick one at random
     subjects = load_subjects()
-    subject = pick_random_subject(subjects)
+    current_subject = subject if subject else pick_random_subject(subjects)
+    logger.info("Subject picked: %.80s", current_subject)
+    typer.echo(f"📌 Subject: {current_subject}")
 
-    # Authenticate with LinkedIn using stored token (fails if no token)
-    linkedin_client = LinkedInClient(
-        LINKEDIN_CLIENT_ID, LINKEDIN_CLIENT_SECRET, LINKEDIN_REDIRECT_URI
+    typer.echo("⏳ Generating post with DeepSeek...")
+    raw_text = generate_post(current_subject, language or "", max_length or 0)
+    if not raw_text:
+        logger.error("Post generation failed.")
+        typer.secho("❌ Failed to generate post.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+
+    typer.echo("🔄 Converting Markdown to Unicode...")
+    logger.info("Converting Markdown to Unicode for LinkedIn compatibility...")
+    generated_text = escape_linkedin(convert(raw_text))
+    logger.info(
+        "Converted: %d characters → %d characters", len(raw_text), len(generated_text)
     )
-    stored_token = db.get_linkedin_token(DB_PATH_ABS)
-    if not stored_token or not stored_token.get("access_token"):
-        print(
-            "❌ No stored LinkedIn token. Run interactive mode first to authenticate.",
-            flush=True,
+
+    typer.echo("⏳ Finding an image...")
+    image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
+    local_image_path, image_url = image_provider.fetch_image(current_subject)
+
+    post_id = db.save_post(
+        DB_PATH_ABS,
+        current_subject,
+        generated_text,
+        image_url=image_url,
+        generated_raw_text=raw_text,
+    )
+    logger.info("Post saved to database (ID=%d).", post_id)
+    typer.echo(f"\n💾 Post saved to database (ID: {post_id})")
+
+    typer.echo("\n" + "═" * 60)
+    typer.echo("   📝  GENERATED POST")
+    typer.echo("═" * 60)
+    typer.echo(generated_text)
+    typer.echo("\n" + "─" * 60)
+    typer.echo(f"   📊 Characters: {len(generated_text)}")
+    if image_url:
+        typer.echo(f"   🖼️  Image: {image_url}")
+    typer.echo("─" * 60)
+
+    image_provider.cleanup(local_image_path)
+
+
+@app.command()
+def post(
+    entry_id: Optional[int] = typer.Option(
+        None,
+        "--entry-id",
+        "-e",
+        help="Post an existing entry from the database by its ID (skips generation).",
+    ),
+    subject: Optional[str] = typer.Option(
+        None,
+        "--subject",
+        "-s",
+        help="Subject to write about. Random if omitted.",
+    ),
+    language: Optional[str] = typer.Option(
+        None,
+        "--language",
+        "-l",
+        help=f"Post language (default: {POST_LANGUAGE})",
+    ),
+    max_length: Optional[int] = typer.Option(
+        None,
+        "--max-length",
+        "-m",
+        help=f"Max post length in characters (default: {MAX_POST_LENGTH})",
+    ),
+):
+    """Generate a post and publish it to LinkedIn."""
+    logger.info("=== Command: post ===")
+
+    if not DEEPSEEK_API_KEY:
+        logger.error("DEEPSEEK_API_KEY is not set in .env file.")
+        typer.secho(
+            "❌ DEEPSEEK_API_KEY is not set in .env file.",
+            fg=typer.colors.RED,
+            err=True,
         )
-        sys.exit(1)
+        raise typer.Exit(1)
+    if not LINKEDIN_CLIENT_ID or not LINKEDIN_CLIENT_SECRET:
+        logger.error("LinkedIn credentials not configured in .env.")
+        typer.secho(
+            "❌ LinkedIn credentials are not configured in .env file.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    logger.info("Initializing database...")
+    db.init_db(DB_PATH_ABS)
+
+    logger.info("Retrieving stored LinkedIn token...")
+    stored_token = db.get_linkedin_token(DB_PATH_ABS)
+    linkedin_client = LinkedInClient(
+        LINKEDIN_CLIENT_ID,
+        LINKEDIN_CLIENT_SECRET,
+        LINKEDIN_REDIRECT_URI,
+    )
+    if not stored_token or not stored_token.get("access_token"):
+        logger.error("No stored LinkedIn token found.")
+        typer.secho(
+            "❌ No stored LinkedIn token. Run `python main.py auth` first.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
 
     linkedin_client.set_access_token(stored_token["access_token"])
     try:
+        logger.info("Verifying LinkedIn access token...")
         user_info = linkedin_client.get_user_info()
-        print(f"🔑 Authenticated as: {user_info.get('name', 'Unknown')}", flush=True)
+        logger.info("Authenticated as: %s", user_info.get("name", "Unknown"))
+        typer.echo(f"🔑 Authenticated as: {user_info.get('name', 'Unknown')}")
     except Exception as e:
-        print(f"❌ LinkedIn token expired or invalid: {e}", flush=True)
-        print("   Run interactive mode to re-authenticate.", flush=True)
-        sys.exit(1)
+        logger.error("LinkedIn token expired or invalid: %s", e)
+        typer.secho(
+            f"❌ LinkedIn token expired or invalid: {e}", fg=typer.colors.RED, err=True
+        )
+        typer.echo("   Run `python main.py auth` to re-authenticate.")
+        raise typer.Exit(1)
 
-    # Generate post
-    print(f"📌 Subject: {subject}", flush=True)
+    # ── Resolve the post to publish ────────────────────────────────────────
 
-    print("⏳ Generating post with DeepSeek...", flush=True)
-    raw_text = generate_post(subject)
-    if not raw_text:
-        print("❌ Failed to generate post.", flush=True)
-        sys.exit(1)
-    # Convert Markdown formatting to Unicode for LinkedIn compatibility, then
-    # escape LinkedIn-reserved chars so the post doesn't get truncated.
-    print("🔄 Converting Markdown to Unicode...", flush=True)
-    generated_text = escape_linkedin(convert(raw_text))
-    # Fetch an image from Unsplash
-    print("⏳ Finding an image...", flush=True)
-    image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
-    local_image_path, image_url = image_provider.fetch_image(subject)
+    if entry_id is not None:
+        # Use an existing entry from the database
+        entry = db.get_post_by_id(DB_PATH_ABS, entry_id)
+        if not entry:
+            logger.error("Entry #%d not found in database.", entry_id)
+            typer.secho(
+                f"❌ Entry #{entry_id} not found in database.",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(1)
 
-    # Save to database (with image URL and raw markdown)
-    post_id = db.save_post(DB_PATH_ABS, subject, generated_text, image_url=image_url, generated_raw_text=raw_text)
+        post_id = entry["id"]
+        current_subject = entry["subject"]
+        generated_text = entry["generated_text"]
+        image_url = entry.get("image_url")
+        logger.info("Using existing entry #%d: %.80s", post_id, current_subject)
+        typer.echo(f"📌 Entry #{post_id}: {current_subject}")
 
-    print("⏳ Posting to LinkedIn...", flush=True)
+        # Download the original image if one was saved
+        local_image_path = None
+        if image_url:
+            logger.info("Re-downloading image from: %s", image_url)
+            image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
+            local_image_path, _ = image_provider.fetch_image(current_subject)
+        else:
+            image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
+    else:
+        # Generate a fresh post
+        subjects = load_subjects()
+        current_subject = subject if subject else pick_random_subject(subjects)
+        logger.info("Subject picked: %.80s", current_subject)
+        typer.echo(f"📌 Subject: {current_subject}")
+
+        typer.echo("⏳ Generating post with DeepSeek...")
+        raw_text = generate_post(current_subject, language or "", max_length or 0)
+        if not raw_text:
+            logger.error("Post generation failed.")
+            typer.secho("❌ Failed to generate post.", fg=typer.colors.RED, err=True)
+            raise typer.Exit(1)
+
+        typer.echo("🔄 Converting Markdown to Unicode...")
+        logger.info("Converting Markdown to Unicode for LinkedIn compatibility...")
+        generated_text = escape_linkedin(convert(raw_text))
+        logger.info(
+            "Converted: %d characters → %d characters",
+            len(raw_text),
+            len(generated_text),
+        )
+
+        typer.echo("⏳ Finding an image...")
+        image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
+        local_image_path, image_url = image_provider.fetch_image(current_subject)
+
+        post_id = db.save_post(
+            DB_PATH_ABS,
+            current_subject,
+            generated_text,
+            image_url=image_url,
+            generated_raw_text=raw_text,
+        )
+        logger.info("Post saved to database (ID=%d).", post_id)
+
+    # ── Publish to LinkedIn ────────────────────────────────────────────────
+
+    typer.echo("⏳ Posting to LinkedIn...")
     try:
         image_urn = None
         if local_image_path:
-            print("   ⏳ Uploading image to LinkedIn...", flush=True)
+            typer.echo("   ⏳ Uploading image to LinkedIn...")
             image_urn = linkedin_client.upload_image(local_image_path)
             image_provider.cleanup(local_image_path)
 
-        lifecycle = "DRAFT" if draft_mode else "PUBLISHED"
+        logger.info("Posting to LinkedIn (lifecycle=PUBLISHED)...")
         result = linkedin_client.create_post(
-            generated_text, image_urn=image_urn, lifecycle_state=lifecycle
+            generated_text,
+            image_urn=image_urn,
+            lifecycle_state="PUBLISHED",
         )
-        label = "draft" if draft_mode else "published"
-        status = "draft" if draft_mode else "posted"
-        db.update_post_status(DB_PATH_ABS, post_id, status)
-        print(f"✅ Posted as {label}! (post #{post_id}) — {subject[:60]}", flush=True)
-        print(f"   🔗 {result['post_url']}", flush=True)
+        db.update_post_status(DB_PATH_ABS, post_id, "posted")
+        typer.echo(f"✅ Published! (post #{post_id}) — {current_subject[:60]}")
+        typer.echo(f"   🔗 {result['post_url']}")
+        logger.info("Post #%d successfully published: %s", post_id, result["post_url"])
     except Exception as e:
-        print(f"❌ Failed to post to LinkedIn: {e}", flush=True)
+        logger.error("Failed to post to LinkedIn: %s", e)
+        typer.secho(
+            f"❌ Failed to post to LinkedIn: {e}", fg=typer.colors.RED, err=True
+        )
         db.update_post_status(DB_PATH_ABS, post_id, "draft")
-        sys.exit(1)
+        raise typer.Exit(1)
 
 
-# ── Main (Interactive) ─────────────────────────────────────────────────────
-
-
-def main(draft_mode: bool = False) -> None:
-    print("\n" + "═" * 60)
-    print("   🚀  LinkedIn Bot — AI-Powered Post Generator")
-    print("═" * 60)
-
-    # Validate configuration
-    if not DEEPSEEK_API_KEY:
-        print("❌ DEEPSEEK_API_KEY is not set in .env file.")
-        sys.exit(1)
+@app.command()
+def auth():
+    """Authenticate with LinkedIn and store the access token."""
+    logger.info("=== Command: auth ===")
 
     if not LINKEDIN_CLIENT_ID or not LINKEDIN_CLIENT_SECRET:
-        print("⚠️  LinkedIn credentials are not fully configured in .env.")
-        print("   Posts can be generated and saved as drafts but not published.\n")
-
-    # Initialize database
-    db.init_db(DB_PATH_ABS)
-    print(f"📦 Database initialized at: {DB_PATH_ABS}")
-
-    # Load subjects
-    subjects = load_subjects()
-    print(f"📚 Loaded {len(subjects)} subjects.\n")
-
-    # Authenticate with LinkedIn (optional — allows posting)
-    linkedin_client = handle_linkedin_auth() if LINKEDIN_CLIENT_ID else None
-
-    # Ask the user how to pick the subject
-    print("─" * 60)
-    print("How would you like to choose the subject?")
-    print("  [r]  Random — pick a random subject from the list")
-    print("  [l]  List — browse subjects and pick one by number")
-    print("  [c]  Custom — type your own subject")
-    print("─" * 60)
-
-    current_subject: str | None = None
-    while current_subject is None:
-        choice = input("→ Your choice: ").strip().lower()
-
-        if choice == "r":
-            current_subject = pick_random_subject(subjects)
-            print(f"\n📌 Random subject: {current_subject}")
-
-        elif choice == "l":
-            print()
-            for i, s in enumerate(subjects, start=1):
-                print(f"  {i:4d}. {s}")
-            while True:
-                try:
-                    idx = input(f"\n  Enter number (1-{len(subjects)}): ").strip()
-                    n = int(idx)
-                    if 1 <= n <= len(subjects):
-                        current_subject = subjects[n - 1]
-                        print(f"\n📌 Subject #{n}: {current_subject}")
-                        break
-                    print(f"  Please enter a number between 1 and {len(subjects)}.")
-                except ValueError:
-                    print("  Please enter a valid number.")
-
-        elif choice == "c":
-            custom = input("\n  Enter your subject: ").strip()
-            if custom:
-                current_subject = custom
-                print(f"\n📌 Custom subject: {current_subject}")
-            else:
-                print("  Subject cannot be empty.")
-
-        else:
-            print("  Invalid choice. Please enter r, l, or c.")
-
-    last_post_id = None
-    last_post_id = None
-
-    while True:
-        print(f"\n{'─' * 60}")
-        print(f"📌  SUBJECT: {current_subject}")
-        print(f"{'─' * 60}")
-
-        print("\n⏳ Generating post with DeepSeek...")
-        raw_text = generate_post(current_subject)
-
-        if not raw_text:
-            print(
-                "\n❌ Failed to generate post. Try a different subject or check your API key."
-            )
-            choice = input("\n  [n] New subject  |  [a] Abort\n→ ").strip().lower()
-            if choice == "a":
-                break
-            elif choice == "n":
-                current_subject = pick_random_subject(subjects)
-                continue
-            else:
-                break
-
-        # Convert Markdown formatting to Unicode, then escape LinkedIn-reserved
-        # chars so the post doesn't get truncated on LinkedIn.
-        print("🔄 Converting Markdown to Unicode...")
-        generated_text = escape_linkedin(convert(raw_text))
-
-        # Fetch an image from Unsplash
-        print("\n⏳ Finding an image...")
-        image_provider = ImageProvider(UNSPLASH_ACCESS_KEY)
-        local_image_path, image_url = image_provider.fetch_image(current_subject)
-        if image_url:
-            print("   🖼️  Image selected from Unsplash")
-
-        # Save to database (with image URL and raw markdown)
-        last_post_id = db.save_post(
-            DB_PATH_ABS, current_subject, generated_text, image_url=image_url, generated_raw_text=raw_text
+        logger.error("LinkedIn credentials not configured in .env.")
+        typer.secho(
+            "❌ LinkedIn credentials are not configured in .env file.",
+            fg=typer.colors.RED,
+            err=True,
         )
-        print(f"\n💾 Post saved to database (ID: {last_post_id})")
+        raise typer.Exit(1)
 
-        # Show the generated text
-        print(f"\n{'═' * 60}")
-        print("   📝  GENERATED POST")
-        print(f"{'═' * 60}")
-        print(generated_text)
-        print(f"\n{'─' * 60}")
-        print(f"   📊 Characters: {len(generated_text)}  |  Subject: {current_subject}")
-        if image_url:
-            print(f"   🖼️  Image: {image_url}")
-        print(f"{'─' * 60}")
+    logger.info("Initializing database...")
+    db.init_db(DB_PATH_ABS)
+    client = handle_linkedin_auth()
+    if client:
+        logger.info("Authentication flow completed successfully.")
+        typer.echo("\n✅ Authentication successful! Token stored.")
+    else:
+        logger.error("Authentication flow failed.")
+        raise typer.Exit(1)
 
-        # Show menu
-        while True:
-            choice = show_menu()
 
-            if choice == "p":
-                if not linkedin_client:
-                    print("\n❌ Cannot post: LinkedIn not configured/authenticated.")
-                    print(
-                        "   Save as draft instead, or configure LinkedIn credentials in .env."
-                    )
-                    continue
+@app.command()
+def history(
+    limit: int = typer.Option(
+        10,
+        "--limit",
+        "-n",
+        help="Number of posts to show.",
+    ),
+    status: Optional[str] = typer.Option(
+        None,
+        "--status",
+        "-s",
+        help="Filter by status (posted, draft, generated, discarded).",
+    ),
+    created_after: Optional[str] = typer.Option(
+        None,
+        "--created-after",
+        "-c",
+        help="Only posts created after this date (ISO format, e.g. 2026-06-01 or 2026-06-01T12:00:00).",
+    ),
+    view: Optional[int] = typer.Option(
+        None,
+        "--view",
+        "-v",
+        help="View the full content of a specific entry by its ID.",
+    ),
+    order: str = typer.Option(
+        "desc",
+        "--order",
+        "-o",
+        help="Sort order: asc (oldest first) or desc (newest first).",
+    ),
+):
+    """Show recent post history from the database."""
+    logger.info("=== Command: history ===")
+    db.init_db(DB_PATH_ABS)
 
-                image_urn = None
-                if local_image_path:
-                    print("   ⏳ Uploading image to LinkedIn...")
-                    try:
-                        image_urn = linkedin_client.upload_image(local_image_path)
-                        print("   ✅ Image uploaded successfully.")
-                    except Exception as e:
-                        print(f"   ⚠️  Image upload failed: {e}")
-                        print("   Proceeding without image.")
-                    finally:
-                        image_provider.cleanup(local_image_path)
+    if view is not None:
+        entry = db.get_post_by_id(DB_PATH_ABS, view)
+        if not entry:
+            logger.error("Entry #%d not found.", view)
+            typer.secho(
+                f"❌ Entry #{view} not found in database.",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(1)
 
-                lifecycle = "DRAFT" if draft_mode else "PUBLISHED"
-                label = "draft" if draft_mode else "post"
-                print(f"\n⏳ Posting as {label} to LinkedIn...")
-                try:
-                    result = linkedin_client.create_post(
-                        generated_text, image_urn=image_urn, lifecycle_state=lifecycle
-                    )
-                    if draft_mode:
-                        db.update_post_status(DB_PATH_ABS, last_post_id, "draft")
-                        print("\n📝  SAVED AS DRAFT ON LINKEDIN! Only you can see it.")
-                        print(f"   🔗 {result['post_url']}")
-                    else:
-                        db.update_post_status(DB_PATH_ABS, last_post_id, "posted")
-                        print("\n✅  POSTED SUCCESSFULLY TO LINKEDIN! 🎉")
-                        print(f"   🔗 {result['post_url']}")
-                except Exception as e:
-                    print(f"\n❌ Failed to post to LinkedIn: {e}")
-                    print("   The post is saved as a draft in the database.")
-                    retry = input("   Try again? [y/N]: ").strip().lower()
-                    if retry == "y":
-                        continue
-                break
+        status_icon = {
+            "posted": "✅",
+            "generated": "📝",
+            "discarded": "🗑️",
+            "draft": "📄",
+        }.get(entry["status"], "❓")
+        created = entry["created_at"][:19] if entry["created_at"] else "?"
+        posted = entry["posted_at"][:19] if entry.get("posted_at") else "—"
 
-            elif choice == "r":
-                image_provider.cleanup(local_image_path)
-                db.update_post_status(DB_PATH_ABS, last_post_id, "regenerated")
-                break  # Break inner loop to regenerate
+        typer.echo("\n" + "═" * 60)
+        typer.echo(f"   {status_icon}  ENTRY #{entry['id']}")
+        typer.echo("═" * 60)
+        typer.echo(f"  Subject:    {entry['subject']}")
+        typer.echo(f"  Status:     {entry['status']}")
+        typer.echo(f"  Created:    {created}")
+        typer.echo(f"  Posted:     {posted}")
+        if entry.get("image_url"):
+            typer.echo(f"  Image:      {entry['image_url']}")
+        typer.echo("─" * 60)
+        typer.echo("  CONTENT:")
+        typer.echo("─" * 60)
+        typer.echo(entry["generated_text"])
+        typer.echo("─" * 60)
+        if entry.get("generated_raw_text"):
+            typer.echo("  RAW (pre-conversion):")
+            typer.echo("─" * 60)
+            typer.echo(entry["generated_raw_text"])
+            typer.echo("─" * 60)
+        return
 
-            elif choice == "n":
-                image_provider.cleanup(local_image_path)
-                db.update_post_status(DB_PATH_ABS, last_post_id, "discarded")
-                current_subject = pick_random_subject(subjects)
-                break  # Break inner loop to start new subject
+    posts = db.get_post_history(
+        DB_PATH_ABS,
+        limit=limit,
+        status=status,
+        created_after=created_after,
+        order=order,
+    )
+    if not posts:
+        logger.info("No posts in history.")
+        typer.echo("📭 No posts in history yet.")
+        return
 
-            elif choice == "s":
-                image_provider.cleanup(local_image_path)
-                db.update_post_status(DB_PATH_ABS, last_post_id, "draft")
-                print("\n📄 Post saved as draft in database.")
-                # Ask if user wants to continue with another subject
-                another = input("\n   Generate another post? [y/N]: ").strip().lower()
-                if another == "y":
-                    current_subject = pick_random_subject(subjects)
-                    break
-                else:
-                    print("\n👋 Goodbye!")
-                    return
+    typer.echo("\n" + "─" * 60)
+    typer.echo("📋  RECENT POST HISTORY")
+    typer.echo("─" * 60)
+    for post in posts:
+        status_icon = {
+            "posted": "✅",
+            "generated": "📝",
+            "discarded": "🗑️",
+            "draft": "📄",
+        }.get(post["status"], "❓")
+        created = post["created_at"][:19] if post["created_at"] else "?"
+        posted = f" | posted: {post['posted_at'][:19]}" if post.get("posted_at") else ""
+        typer.echo(f"  {status_icon}  #{post['id']} — {post['subject'][:60]}")
+        typer.echo(f"     {created}{posted} | status: {post['status']}")
+    typer.echo("─" * 60)
 
-            elif choice == "a":
-                image_provider.cleanup(local_image_path)
-                db.update_post_status(DB_PATH_ABS, last_post_id, "discarded")
-                print("\n👋 Aborted. Goodbye!")
-                return
 
-            elif choice == "h":
-                show_post_history()
-                continue  # Show menu again after history
-
-        # If we posted and the user wants to continue
-        if choice == "p":
-            another = input("\n   Generate another post? [y/N]: ").strip().lower()
-            if another == "y":
-                current_subject = pick_random_subject(subjects)
-                continue
-            else:
-                print("\n👋 Goodbye!")
-                break
+@app.command()
+def subjects():
+    """List all available subjects."""
+    logger.info("=== Command: subjects ===")
+    subjects_list = load_subjects()
+    typer.echo(f"\n📚 Available subjects ({len(subjects_list)}):\n")
+    for i, s in enumerate(subjects_list, start=1):
+        typer.echo(f"  {i:4d}. {s}")
+    typer.echo()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="LinkedIn Bot — AI-powered post generator"
-    )
-    parser.add_argument(
-        "--auto",
-        action="store_true",
-        help="Automated mode: generate, post to LinkedIn, then exit. Suitable for cron.",
-    )
-    parser.add_argument(
-        "--draft",
-        action="store_true",
-        help="Post as a draft (only you can see it). Useful for testing.",
-    )
-    args = parser.parse_args()
-
-    if args.auto:
-        if args.draft:
-            print("\n📝 Draft mode enabled — posts will only be visible to you.\n")
-        run_auto(draft_mode=args.draft)
-    else:
-        if args.draft:
-            print("\n📝 Draft mode enabled — posts will only be visible to you.\n")
-        main(draft_mode=args.draft)
+    app()

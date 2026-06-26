@@ -3,6 +3,7 @@
 Uses the official linkedin-api-client library under the hood.
 """
 
+import logging
 import threading
 import time
 import urllib.parse
@@ -12,6 +13,8 @@ from pathlib import Path
 import requests
 from linkedin_api.clients.auth.client import AuthClient
 from linkedin_api.clients.restli.client import RestliClient
+
+logger = logging.getLogger(__name__)
 
 
 class LinkedInClient:
@@ -55,12 +58,14 @@ class LinkedInClient:
             The access token string.
         """
         auth_code = self._get_auth_code_via_browser()
+        logger.info("Authorization code received, exchanging for access token...")
 
         # Use the official AuthClient to exchange the code for a token
         token_response = self._auth_client.exchange_auth_code_for_access_token(
             code=auth_code
         )
         self.access_token = token_response.access_token
+        logger.info("LinkedIn OAuth token obtained successfully.")
         return self.access_token
 
     def _get_auth_code_via_browser(self) -> str:
@@ -115,8 +120,8 @@ class LinkedInClient:
         server_thread = threading.Thread(target=server.serve_forever, daemon=True)
         server_thread.start()
 
-        print("\n🔐 Opening browser for LinkedIn authorization...")
-        print(f"   If the browser doesn't open, visit this URL:\n   {auth_url}\n")
+        logger.info("Opening browser for LinkedIn authorization...")
+        logger.info("If the browser doesn't open, visit this URL: %s", auth_url)
 
         import webbrowser
 
@@ -141,10 +146,12 @@ class LinkedInClient:
     def get_user_info(self) -> dict:
         """Get the authenticated user's profile information using the RestliClient."""
         self._ensure_authenticated()
+        logger.debug("Fetching user info from LinkedIn /userinfo...")
         response = self._restli_client.get(
             resource_path=self.USERINFO_RESOURCE,
             access_token=self.access_token,
         )
+        logger.debug("LinkedIn /userinfo response: HTTP %d", response.status_code)
         return response.entity
 
     def set_access_token(self, token: str) -> None:
@@ -182,6 +189,7 @@ class LinkedInClient:
                 )
 
         # Step 1: Register the image upload
+        logger.info("Initializing image upload on LinkedIn...")
         response = self._restli_client.action(
             resource_path=self.IMAGES_RESOURCE,
             action_name="initializeUpload",
@@ -192,6 +200,10 @@ class LinkedInClient:
             },
             version_string=self.API_VERSION,
             access_token=self.access_token,
+        )
+
+        logger.debug(
+            "LinkedIn image upload init response: HTTP %d", response.status_code
         )
 
         if response.status_code not in (200, 201):
@@ -211,6 +223,7 @@ class LinkedInClient:
         with open(image_path, "rb") as f:
             image_data = f.read()
 
+        logger.info("Uploading image binary (%d bytes) to LinkedIn...", len(image_data))
         upload_response = requests.put(
             upload_url,
             data=image_data,
@@ -221,12 +234,18 @@ class LinkedInClient:
             timeout=30,
         )
 
+        logger.debug(
+            "LinkedIn image binary upload response: HTTP %d",
+            upload_response.status_code,
+        )
+
         if upload_response.status_code not in (200, 201):
             raise RuntimeError(
                 f"LinkedIn image binary upload failed "
                 f"(status {upload_response.status_code})"
             )
 
+        logger.info("Image uploaded to LinkedIn, URN: %s", image_urn)
         return image_urn
 
     def create_post(
@@ -287,6 +306,9 @@ class LinkedInClient:
                     "id": image_urn,
                 }
             }
+            logger.debug("Attaching image URN to post: %s", image_urn)
+
+        logger.info("Creating LinkedIn post (lifecycle=%s)...", lifecycle_state)
 
         # Use the /posts endpoint with the versioned API.
         # The RestliClient does NOT raise on HTTP errors, so we check status manually.
@@ -299,6 +321,8 @@ class LinkedInClient:
 
         # The RestliClient does not raise on HTTP errors — it wraps the response.
         # Check the status code explicitly and raise if the post wasn't created.
+        logger.debug("LinkedIn create post response: HTTP %d", response.status_code)
+
         if response.status_code != 201:
             # Try to extract error info from the raw response
             error_body = ""
@@ -306,6 +330,11 @@ class LinkedInClient:
                 error_body = response.response.text[:500]
             except Exception:
                 pass
+            logger.error(
+                "LinkedIn post creation failed (HTTP %d): %s",
+                response.status_code,
+                error_body,
+            )
             raise RuntimeError(
                 f"LinkedIn API error (status {response.status_code}): {error_body}"
             )
@@ -313,6 +342,8 @@ class LinkedInClient:
         post_id = response.decoded_entity_id or response.entity_id or ""
         # Construct a URL the user can visit
         post_url = f"https://www.linkedin.com/feed/update/{post_id}"
+
+        logger.info("LinkedIn post created successfully: %s", post_url)
 
         return {
             "post_id": post_id,

@@ -5,11 +5,11 @@ AI-powered LinkedIn post generator using **DeepSeek** for content creation and t
 ## Features
 
 - 🤖 Generates engaging tech posts via DeepSeek API
-- 📝 Interactive mode — preview, regenerate, or discard before posting
-- ⚙️ Automated mode (`--auto`) — headless operation for cron jobs
+- 🎛️  Typer CLI — clean subcommand-based interface
 - 📚 170+ curated software engineering subjects across 10 categories
 - 💾 SQLite database — tracks every post with status and timestamps
 - 🔐 OAuth 2.0 with token persistence (no repeated logins)
+- 🖼️  Unsplash image integration for post visuals
 
 ## Prerequisites
 
@@ -50,43 +50,63 @@ POST_LANGUAGE=en
 
 # Database
 DB_PATH=posts.db
+
+# Logging (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
 ```
 
 > **LinkedIn OAuth scopes required:** `openid`, `profile`, `w_member_social`, `email`
 
 ## Usage
 
-### Interactive mode
+The CLI is built with [Typer](https://typer.tiangolo.com/) and offers several subcommands:
 
 ```bash
-uv run python main.py
+# Generate a post (random subject)
+uv run python main.py generate
+
+# Generate a post about a specific subject
+uv run python main.py generate --subject "Microservices architecture"
+
+# Generate + publish to LinkedIn
+uv run python main.py post
+
+# Generate + publish as a private draft (testing)
+uv run python main.py post --draft
+
+# Use a specific subject when posting
+uv run python main.py post --subject "Rust vs Go in 2026" --draft
+
+# Override language or max length
+uv run python main.py generate --language pt --max-length 2000
+
+# Authenticate with LinkedIn (stores token for future use)
+uv run python main.py auth
+
+# Show post history
+uv run python main.py history
+
+# List all available subjects
+uv run python main.py subjects
 ```
 
-First run will open your browser for LinkedIn authorization (OAuth flow). After that,
-the token is saved locally.
+### First-time setup
 
-You'll see a menu to:
-- **`p`** — Post to LinkedIn
-- **`r`** — Regenerate (same subject, new text)
-- **`n`** — New subject (pick a random topic)
-- **`s`** — Skip / Save as draft
-- **`a`** — Abort and exit
-- **`h`** — Show post history
+1. **Authenticate** with LinkedIn: `uv run python main.py auth`
+   - This opens your browser for OAuth authorization.
+   - The token is stored locally; you won't need to re-authenticate unless it expires.
 
-### Automated mode (cron-friendly)
+2. **Generate a post**: `uv run python main.py generate`
+   - Picks a random subject, generates content via DeepSeek, and prints it.
 
-```bash
-uv run python main.py --auto
-```
-
-Picks a random subject, generates a post, publishes it, and exits — no prompts.
-Exits with code `0` on success, `1` on failure.
+3. **Post to LinkedIn**: `uv run python main.py post`
+   - Generates a post and publishes it immediately.
 
 #### Crontab example
 
 ```cron
 # Post every Monday and Thursday at 9 AM
-0 9 * * 1,4 cd /home/leal/git/PythonCode/LinkedInBot && /home/leal/git/PythonCode/LinkedInBot/.venv/bin/python main.py --auto >> /tmp/linkedin-bot.log 2>&1
+0 9 * * 1,4 cd /home/leal/git/PythonCode/LinkedInBot && /home/leal/git/PythonCode/LinkedInBot/.venv/bin/python main.py post >> /tmp/linkedin-bot.log 2>&1
 ```
 
 > Use the **full path** to `.venv/bin/python` in cron since it doesn't source your shell.

@@ -4,11 +4,14 @@ Uses the free Unsplash API (requires an access key).
 Rate limit: 50 requests/hour on the free tier.
 """
 
+import logging
 import os
 import tempfile
 from pathlib import Path
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 class ImageProvider:
@@ -100,11 +103,14 @@ class ImageProvider:
             Both are None if no image could be fetched.
         """
         if not self.access_key:
-            print("   ⚠️  UNSPLASH_ACCESS_KEY not set — skipping image.")
+            logger.warning("UNSPLASH_ACCESS_KEY not set — skipping image.")
             return None, None
 
         keywords = self._keywords_from_subject(subject)
         query = " ".join(keywords)
+        logger.info(
+            "Searching Unsplash for image (query=%s, subject=%.50s)", query, subject
+        )
 
         # Try the specific query first; fall back to broader tech queries
         queries_to_try = [query] + self._FALLBACK_QUERIES
@@ -114,12 +120,13 @@ class ImageProvider:
             if image_url:
                 local_path = self._download_image(image_url)
                 if local_path:
+                    logger.info("Image found on Unsplash: %s", image_url)
                     return str(local_path), image_url
             # Don't keep retrying the fallbacks if the first failed due to auth
             if q == queries_to_try[0] and not self.access_key:
                 break
 
-        print("   ⚠️  Could not find a suitable image on Unsplash.")
+        logger.warning("Could not find a suitable image on Unsplash.")
         return None, None
 
     def _search_unsplash(self, query: str) -> tuple[str | None, str | None]:
@@ -129,6 +136,9 @@ class ImageProvider:
         The ``download_url`` is an API endpoint for tracking downloads
         (requires a separate authed request).
         """
+        logger.debug(
+            "Unsplash API request: GET %s?query=%s", self.UNSPLASH_SEARCH_URL, query
+        )
         try:
             response = requests.get(
                 self.UNSPLASH_SEARCH_URL,
@@ -142,18 +152,23 @@ class ImageProvider:
                 timeout=10,
             )
 
+            logger.debug("Unsplash API response: HTTP %d", response.status_code)
+
             if response.status_code == 401:
-                print("   ⚠️  Unsplash API key is invalid.")
+                logger.error("Unsplash API key is invalid (HTTP 401).")
                 return None, None
 
             if response.status_code == 403:
-                print("   ⚠️  Unsplash rate limit exceeded. Try again later.")
+                logger.error(
+                    "Unsplash rate limit exceeded (HTTP 403). Try again later."
+                )
                 return None, None
 
             response.raise_for_status()
             data = response.json()
 
             if not data.get("results"):
+                logger.debug("Unsplash returned 0 results for query: %s", query)
                 return None, None
 
             # Pick the first result — use the raw URL for downloading
@@ -161,26 +176,38 @@ class ImageProvider:
             photo = data["results"][0]
             img_url = photo["urls"]["raw"] or photo["urls"]["regular"]
             download_url = photo["links"]["download_location"]
+            logger.debug(
+                "Unsplash result: %s (by %s)",
+                img_url,
+                photo.get("user", {}).get("name", "unknown"),
+            )
             return img_url, download_url
 
         except requests.RequestException as e:
-            print(f"   ⚠️  Unsplash search failed: {e}")
+            logger.error("Unsplash search failed: %s", e)
             return None, None
 
     def _download_image(self, image_url: str) -> Path | None:
         """Download an image to a temporary file."""
+        logger.debug("Downloading image from Unsplash...")
         try:
             response = requests.get(image_url, timeout=15)
+            logger.debug(
+                "Image download response: HTTP %d (%d bytes)",
+                response.status_code,
+                len(response.content),
+            )
             response.raise_for_status()
 
             # Save to a temp file
             tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
             tmp.write(response.content)
             tmp.close()
+            logger.debug("Image saved to temp file: %s", tmp.name)
             return Path(tmp.name)
 
         except requests.RequestException as e:
-            print(f"   ⚠️  Failed to download image: {e}")
+            logger.error("Failed to download image: %s", e)
             return None
 
     @staticmethod
