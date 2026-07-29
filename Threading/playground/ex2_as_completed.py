@@ -1,3 +1,14 @@
+"""
+Demonstrate concurrent.futures.as_completed() and executor.map().
+
+Compares two approaches to collecting results from a thread pool:
+  1. as_completed() — processes results in completion order (fastest first).
+  2. executor.map() — yields results in submission order.
+
+Useful for understanding how to handle futures as they finish rather than
+waiting for all of them.
+"""
+
 import concurrent.futures
 import time
 

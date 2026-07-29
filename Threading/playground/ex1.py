@@ -1,3 +1,12 @@
+"""
+Time-based task submission with ThreadPoolExecutor and graceful shutdown.
+
+A TimeSystem class checks the current timestamp in a loop and submits
+tasks to a thread pool based on divisibility rules (3 → key 1, 5 → key 2,
+7 → key 3). Handles SIGINT for graceful shutdown, waits for running
+futures to finish, then prints the aggregated results.
+"""
+
 import random
 import signal
 import sys

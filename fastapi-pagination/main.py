@@ -9,9 +9,10 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 app = FastAPI()
 add_pagination(app)
 
-engine = create_engine("sqlite:///.db")
+engine = create_engine("sqlite:///:memory:")
 
 
+# -- Database Models --
 class Base(DeclarativeBase):
     pass
 
@@ -23,6 +24,7 @@ class User(Base):
     age: Mapped[int] = mapped_column()
 
 
+# -- Pydantic Models --
 class UserOut(BaseModel):
     id: int
     name: str
@@ -30,6 +32,14 @@ class UserOut(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class UserIn(BaseModel):
+    name: str
+    age: int
+
+
+# -- Application Startup --
 
 
 @app.on_event("startup")
@@ -47,7 +57,26 @@ def on_startup():
         session.commit()
 
 
+# -- API Endpoints --
+
+
 @app.get("/users")
 def get_users() -> CursorPage[UserOut]:
     with Session(engine) as session:
         return paginate(session, select(User).order_by(User.id))
+
+
+@app.get("/users/{user_id}")
+def get_user(user_id: int) -> UserOut:
+    with Session(engine) as session:
+        return session.get(User, user_id)
+
+
+@app.post("/users", status_code=201)
+def create_user(user: UserIn) -> UserOut:
+    with Session(engine) as session:
+        db_user = User(name=user.name, age=user.age)
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+        return db_user

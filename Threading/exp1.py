@@ -1,59 +1,56 @@
 """
-Launch redis server with docker:
-docker run --name my_redis_server -p 6379:6379 -d redis:7.2
+Fetch and process posts from JSONPlaceholder API using a ThreadPoolExecutor.
 
+Demonstrates a BFS-like crawl: starts from a single URL, fetches posts, and
+enqueues individual post URLs found in the response. Uses a queue.Queue to
+dynamically manage work items and concurrent.futures for parallel execution.
 """
 
-import time
-import urllib.parse
+import queue
+from concurrent.futures import ThreadPoolExecutor
 
-import redis
 import requests
 
-# Redis connection
-r = redis.Redis()
+initial_url = "https://jsonplaceholder.typicode.com/posts"
 
 
-# Delete all created keys
-def delete_all_keys(app_id, organization_id, system_id):
-    keys = r.keys(f"{app_id}:{organization_id}:{system_id}:*")
-    if keys:
-        r.delete(*keys)
-
-
-# Function to fetch and store URL content
-def fetch_and_store_url(app_id, organization_id, system_id, url):
-    key = f"{app_id}:{organization_id}:{system_id}:{urllib.parse.quote(url)}"
-
-    # Check if content is already in Redis
-    cached_content = r.get(key)
-    if cached_content:
-        print(f"\tCache hit! key={key}")
-        return cached_content.decode("utf-8")
-
-    # Fetch content from the URL
+def fetch(url):
+    print(f"\tFetching {url}")
     response = requests.get(url)
     if response.status_code == 200:
-        content = response.content.decode("utf-8")
-        r.set(key, content)
-        return content
+        return response.json()
     else:
         raise Exception(f"Failed to fetch URL {url}: {response.status_code}")
 
 
-# Example usage
-app_id = "myapp"
-organization_id = "o_myorg"
-system_id = "r_mysystem"
-urls = ["https://jsonplaceholder.typicode.com/posts/{}".format(i) for i in range(1, 6)]
+def process_url(url: str, q_in: queue.Queue):
+    content = fetch(url)
+    out = []
+    if type(content) is not list:
+        parseable = True
+        out.append(content["title"])
+    else:
+        for item in content:
+            if "id" in item:
+                parseable = True
+                out.append(item["title"])
+                q_in.put(f"https://jsonplaceholder.typicode.com/posts/{item['id']}")
+    return out
 
 
-for url in urls * 2:
-    start = time.time()
-    content = fetch_and_store_url(app_id, organization_id, system_id, url)
-    print(
-        f"Fetching {url} :: {(time.time() - start) * 1000:.3f} ms ({len(content)} Bytes, md5={hash(content)})"
-    )
+e = ThreadPoolExecutor(max_workers=2)
 
-# If it didn't crash, delete all keys created
-delete_all_keys(app_id, organization_id, system_id)
+q_in = queue.Queue()
+
+
+q_in.put(initial_url)
+
+
+while not q_in.empty():
+    url = q_in.get()
+    f = e.submit(process_url, url, q_in)
+    print(f.result())
+
+e.shutdown(wait=True)
+
+print("Done")

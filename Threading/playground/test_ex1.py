@@ -1,3 +1,14 @@
+"""
+Unit tests for the TimeSystem class (ex1.py).
+
+Tests cover:
+  - Correct data increment behaviour
+  - Thread safety under concurrent access
+  - Timestamp-based task submission logic
+  - Shutdown flag mechanism
+  - Signal handler behaviour
+"""
+
 import random
 import threading
 from unittest.mock import patch
